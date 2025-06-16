@@ -32,18 +32,23 @@ import threading
 import webbrowser
 from collections import defaultdict
 import concurrent.futures
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 app = Flask(__name__)
 
 def measure_sensor_pair(sensor_pair):
+    machine_id = sensor_pair[2]
+    position_id = sensor_pair[3]
+    logging.info(f"Starting measurement thread for machine {machine_id}, position {position_id}")
+
     superior_distances = []
     inferior_distances = []
-    
+
     while True:
         superior_ip = sensor_pair[1]
         inferior_ip = sensor_pair[7]
-        machine_id = sensor_pair[2]
-        position_id = sensor_pair[3]
 
         #print(f"Superior IP: {superior_ip}, Inferior IP: {inferior_ip}") # Imprimir IPs
 
@@ -90,6 +95,10 @@ def measure_sensor_pair(sensor_pair):
             timestamp = datetime.now()
             data = (timestamp, machine_id, position_id, superior_avg, inferior_avg)
             insert_measurement(data)
+            logging.info(
+                f"Measurement inserted for machine {machine_id}, position {position_id}: "
+                f"sup={superior_avg:.2f} inf={inferior_avg:.2f}"
+            )
 
             # Limpar as listas para o próximo conjunto de 5 valores
             superior_distances.clear()
@@ -99,8 +108,13 @@ def measure_sensor_pair(sensor_pair):
 
 def start_measurement_threads():
     sensor_pairs = get_sensor_pairs()
+    logging.info(f"Found {len(sensor_pairs)} sensor pair(s)")
     for pair in sensor_pairs:
+        machine_id = pair[2]
+        position_id = pair[3]
+        logging.info(f"Starting thread for machine {machine_id}, position {position_id}")
         thread = threading.Thread(target=measure_sensor_pair, args=(pair,))
+        thread.daemon = True
         thread.start()
 
 # Conexão com o banco de dados
@@ -355,11 +369,19 @@ def calibrate(machine_id, position_id):
         block_thickness = Decimal(request.form['block_thickness']).quantize(Decimal('0.00'))
         timestamp = datetime.now()
 
+        logging.info(
+            f"Calibration requested for machine {machine_id}, position {position_id} at {timestamp}"
+        )
+
         # Espere pela próxima entrada de dados
         while True:
             latest_measurement = get_latest_measurement(machine_id, position_id, timestamp)
             if latest_measurement:
+                logging.info(
+                    f"Measurement found for calibration: sup={latest_measurement[4]} inf={latest_measurement[5]}"
+                )
                 break
+            logging.debug("No measurement yet for calibration, waiting 1s")
             time.sleep(1)
 
         # Calcule o valor da calibração
