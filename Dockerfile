@@ -20,8 +20,8 @@ COPY scripts/ /app/scripts/
 # Tornar os scripts executáveis
 RUN chmod +x /app/scripts/*.sh
 
-# Expor a porta 5000 (ou a porta em que seu Flask está rodando)
-EXPOSE 4999
+# Expor a porta 80 em que o Flask será executado
+EXPOSE 80
 
 # Script de entrada que inicia o PostgreSQL e depois a aplicação
 ENTRYPOINT ["/app/scripts/entrypoint.sh"]
