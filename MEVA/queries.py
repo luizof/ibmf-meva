@@ -114,6 +114,14 @@ def get_sensors():
     conn.close()
     return sensors
 
+def get_sensor(sensor_id):
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute("SELECT * FROM Sensores WHERE ID = %s;", (sensor_id,))
+    sensor = cur.fetchone()
+    conn.close()
+    return sensor
+
 def get_sensor_pairs():
     conn = connect()
     cur = conn.cursor()

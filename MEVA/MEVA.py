@@ -515,6 +515,22 @@ def limits_():
     return render_template('limits.html', machine_limits=machine_limits)
 
 
+@app.route('/debug')
+def debug_page():
+    sensors = queries.get_sensors()
+    return render_template('debug.html', sensors=sensors)
+
+
+@app.route('/sensor_reading/<int:sensor_id>')
+def sensor_reading(sensor_id):
+    sensor = queries.get_sensor(sensor_id)
+    value = None
+    if sensor:
+        ip = sensor[1]
+        value = fast_get_distance(ip, 8899)
+    return jsonify({'value': value})
+
+
 @app.route('/set_limits/<machine_id>/<float:limit>')
 def set_limits(machine_id, limit):
     limit_data = limits.load_limits()
