@@ -11,6 +11,7 @@
     <script src="/static/script.js"></script> <!-- Inclua o arquivo script.js -->
 </head>
 <body>
+    <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
     {% for machine in machines %}
     <div id="machine-name-{{ loop.index }}" class="machine-name {% if machine.out_of_limits %}out-of-limits{% endif %}">
         <h1>{{ machine.name }}</h1>

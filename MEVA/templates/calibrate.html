@@ -7,6 +7,7 @@
     <title>Calibrar</title>
 </head>
 <body>
+    <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
     <h1>Calibrar</h1>
     <form action="{{ url_for('calibrate', machine_id=machine_id, position_id=position_id) }}" method="post" class="form-container">
         <label for="block_thickness">Espessura do Bloco Padrão em mm:</label>
