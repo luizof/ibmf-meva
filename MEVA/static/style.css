@@ -229,3 +229,15 @@ a {
 .out-of-limits {
     background-color: #ff4069; /* Cor de fundo vermelha */
 }
+.back-button {
+    display: inline-block;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    padding: 8px 16px;
+    margin-bottom: 15px;
+}
+
+.back-button:hover {
+    background-color: #0056b3;
+}

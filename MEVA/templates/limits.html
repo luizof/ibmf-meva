@@ -8,6 +8,7 @@
     <title>Configuração de Limites</title>
 </head>
 <body>
+    <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
     <div class="machine-grid">
         {% for machine_name, lower_limit, upper_limit, machine_id in machine_limits %}
         <div class="machine-block">
