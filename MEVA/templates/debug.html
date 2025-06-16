@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Debug Sensor</title>
+</head>
+<body>
+    <h1>Debug de Sensor</h1>
+    <label for="sensor">Selecione o sensor:</label>
+    <select id="sensor">
+        <option value="">-- Selecione --</option>
+        {% for sensor in sensors %}
+        <option value="{{ sensor[0] }}">{{ sensor[0] }} - {{ sensor[1] }}</option>
+        {% endfor %}
+    </select>
+    <p>Leitura Atual: <span id="reading">--</span></p>
+
+    <script>
+        const select = document.getElementById('sensor');
+        const reading = document.getElementById('reading');
+        let current = null;
+        select.addEventListener('change', () => {
+            current = select.value;
+            reading.textContent = '--';
+        });
+        setInterval(() => {
+            if (!current) return;
+            fetch(`/sensor_reading/${current}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.value === null) {
+                        reading.textContent = 'Erro';
+                    } else {
+                        reading.textContent = data.value.toFixed(2) + ' mm';
+                    }
+                })
+                .catch(() => reading.textContent = 'Erro');
+        }, 1000);
+    </script>
+</body>
+</html>
