@@ -532,18 +532,18 @@ def homepage():
 
 def open_urls():
     urls_old = [
-        'http://127.0.0.1:4999/maquinas',
-        'http://127.0.0.1:4999/posicoes',
-        'http://127.0.0.1:4999/sensores',
-        'http://127.0.0.1:4999/status',
-        'http://127.0.0.1:4999/calibrations',
-        'http://127.0.0.1:4999/view_h',
-        'http://127.0.0.1:4999/view',
-        'http://127.0.0.1:4999/limits_'
+        'http://127.0.0.1/maquinas',
+        'http://127.0.0.1/posicoes',
+        'http://127.0.0.1/sensores',
+        'http://127.0.0.1/status',
+        'http://127.0.0.1/calibrations',
+        'http://127.0.0.1/view_h',
+        'http://127.0.0.1/view',
+        'http://127.0.0.1/limits_'
     ]
 
     urls = [
-        'http://127.0.0.1:4999/'
+        'http://127.0.0.1/'
     ]
 
     for url in urls:
@@ -559,5 +559,4 @@ if __name__ == '__main__':
     start_measurement_threads()
 
     # Run the app
-    app.run(debug=False, host='0.0.0.0', port=4999)
-    #app.run(debug=False, port=4999)
+    app.run(debug=False, host='0.0.0.0', port=80)

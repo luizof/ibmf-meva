@@ -14,7 +14,7 @@ docker build -t meva .
 E para executar:
 
 ```
-docker run -p 4999:4999 meva
+docker run -p 80:80 meva
 ```
 
 O container inicia o PostgreSQL, cria o banco `BD_MEP` com as tabelas definidas em
