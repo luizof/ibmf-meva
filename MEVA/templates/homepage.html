@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>MEVA - Medição Espessura Vinílicos Arquitech</title>
+    <style>
+        body {
+            font-family: 'Sansations', sans-serif;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1100px;
+            margin: auto;
+            padding: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+        }
+        .card {
+            background-color: #ffffff;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px;
+            flex: 1 1 calc(33.333% - 40px);
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .card a {
+            text-decoration: none;
+            color: #e4a722;
+        }
+        .card-title {
+            font-weight: bold;
+        }
+        .icon {
+            font-size: 40px;
+            color: #e4a722;
+        }
+        h1 {
+            font-weight: bold;
+            text-align: center;
+            color: #000;
+        }
+        h2 {
+            text-align: center;
+            color: #777;
+        }
+    </style>
+</head>
+<body>
+    <h1>MEVA</h1>
+    <h2>Medição Espessura Vinílicos Arquitech</h2>
+    <div class="container">
+        <div class="card">
+            <div class="icon">&#128100;</div>
+            <div class="card-title">Cadastro Máquinas</div>
+            <a href="/maquinas">Ir para Cadastro Máquinas</a>
+        </div>
+        <div class="card">
+            <div class="icon">&#128100;</div>
+            <div class="card-title">Cadastro Posições</div>
+            <a href="/posicoes">Ir para Cadastro Posições</a>
+        </div>
+        <div class="card">
+            <div class="icon">&#128110;</div>
+            <div class="card-title">Status</div>
+            <a href="/status">Ir para Status</a>
+        </div>
+        <div class="card">
+            <div class="icon">&#128100;</div>
+            <div class="card-title">Cadastro de Sensores</div>
+            <a href="/sensores">Ir para Cadastro de Sensores</a>
+        </div>
+        <div class="card">
+            <div class="icon">&#128204;</div>
+            <div class="card-title">Calibrações</div>
+            <a href="/calibrations">Ir para Calibrações</a>
+        </div>
+        <div class="card">
+            <div class="icon">&#128336;</div>
+            <div class="card-title">Histórico</div>
+            <a href="/view_h">Ir para Histórico</a>
+        </div>
+        <div class="card">
+            <div class="icon">&#128065;</div>
+            <div class="card-title">Monitoramento</div>
+            <a href="/view">Ir para Monitoramento</a>
+        </div>
+        <div class="card">
+            <div class="icon">&#10132;</div>
+            <div class="card-title">Limites</div>
+            <a href="/limits_">Ir para Limites</a>
+        </div>
+
+    </div>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Posições</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Posições</h1>
+    <a href="{{ url_for('adicionar_posicao') }}">Adicionar Posição</a>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Nome da Posição</th>
+            <th>Descrição da Posição</th>
+            <th>Ações</th>
+        </tr>
+        {% for posicao in posicoes %}
+        <tr>
+            <td>{{ posicao[0] }}</td>
+            <td>{{ posicao[1] }}</td>
+            <td>{{ posicao[2] }}</td>
+            <td>
+                <a href="{{ url_for('editar_posicao', id=posicao[0]) }}">Editar</a> |
+                <a href="{{ url_for('remover_posicao', id=posicao[0]) }}">Remover</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

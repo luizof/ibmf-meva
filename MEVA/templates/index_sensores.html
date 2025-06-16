@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sensores</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Sensores</h1>
+    <a href="{{ url_for('adicionar_sensor') }}">Adicionar Sensor</a>
+    <table>
+        <tr>
+            <th>ID</th>
+            <th>Endereço IP</th>
+            <th>Máquina</th>
+            <th>Posição</th>
+            <th>É Superior?</th>
+            <th>Ações</th>
+        </tr>
+        {% for sensor in sensores %}
+        <tr>
+            <td>{{ sensor[0] }}</td>
+            <td>{{ sensor[1] }}</td>
+            <td>{{ sensor[2] }}</td>
+            <td>{{ sensor[3] }}</td>
+            <td>{{ "Sim" if sensor[4] else "Não" }}</td>
+            <td>
+                <a href="{{ url_for('editar_sensor', id=sensor[0]) }}">Editar</a> |
+                <a href="{{ url_for('remover_sensor', id=sensor[0]) }}">Remover</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</body>
+</html>

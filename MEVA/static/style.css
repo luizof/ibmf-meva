@@ -1,0 +1,231 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid #dddddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+a {
+    text-decoration: none;
+    color: #007bff;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.form-container {
+    width: 400px;
+    margin: 0 auto;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+label, input, textarea {
+    width: 100%;
+}
+
+input[type="submit"] {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+input[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+a {
+    display: block;
+    margin-top: 10px;
+}
+
+.connected {
+    color: green;
+}
+
+.disconnected {
+    color: red;
+}
+
+.calibrate-button {
+    display: inline-block;
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    margin: 10px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+.calibrate-button:hover {
+    background-color: #45a049;
+}
+
+.connecting {
+    color: yellow;
+}
+
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 20px;
+}
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    border: 1px solid #dddddd;
+    padding: 8px;
+    text-align: left;
+}
+
+th {
+    background-color: #f2f2f2;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+a {
+    text-decoration: none;
+    color: #007bff;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+.form-container {
+    width: 400px;
+    margin: 0 auto;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+label, input, textarea {
+    width: 100%;
+}
+
+input[type="submit"] {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+input[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+a {
+    display: block;
+    margin-top: 10px;
+}
+
+.connected {
+    color: green;
+}
+
+.disconnected {
+    color: red;
+}
+
+.calibrate-button {
+    display: inline-block;
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    margin: 10px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    font-size: 16px;
+}
+
+.calibrate-button:hover {
+    background-color: #45a049;
+}
+
+.connecting {
+    color: yellow;
+}
+
+.machine-grid {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-around;
+}
+
+.machine-block {
+    flex: 1 0 calc(33% - 20px); /* Permite até 3 máquinas lado a lado, com margem de 20px */
+    margin: 10px;
+    padding: 15px;
+    border: 1px solid #dddddd;
+    min-width: 200px; /* Largura mínima para garantir que o layout seja agradável */
+}
+
+.button-group {
+    display: flex;
+    justify-content: space-around;
+}
+
+.limit-button {
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    text-decoration: none;
+    margin: 5px;
+    text-align: center;
+}
+
+.limit-button:hover {
+    background-color: #0056b3;
+}
+
+.out-of-limits {
+    background-color: #ff4069; /* Cor de fundo vermelha */
+}

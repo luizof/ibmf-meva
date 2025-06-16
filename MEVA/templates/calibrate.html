@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Calibrar</title>
+</head>
+<body>
+    <h1>Calibrar</h1>
+    <form action="{{ url_for('calibrate', machine_id=machine_id, position_id=position_id) }}" method="post" class="form-container">
+        <label for="block_thickness">Espessura do Bloco Padrão em mm:</label>
+        <input type="number" step="0.01" id="block_thickness" name="block_thickness" required>
+        <input type="submit" value="Calibrar">
+    </form>
+</body>
+</html>

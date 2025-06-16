@@ -1,0 +1,43 @@
+CREATE TABLE Maquinas (
+    ID SERIAL PRIMARY KEY,
+    Nome VARCHAR(255),
+    Descricao TEXT
+);
+
+CREATE TABLE Posicoes (
+    ID SERIAL PRIMARY KEY,
+    Nome_Posicao VARCHAR(255),
+    Descricao_Posicao TEXT
+);
+
+CREATE TABLE Sensores (
+    ID SERIAL PRIMARY KEY,
+    Endereco_ip VARCHAR(255),
+    Maquina_ID INTEGER REFERENCES Maquinas(ID),
+    Posicao_ID INTEGER REFERENCES Posicoes(ID),
+    E_Superior BOOLEAN,
+    status VARCHAR(255)
+);
+
+CREATE TABLE Calibracoes (
+    ID SERIAL PRIMARY KEY,
+    Data_Hora_Calibracao TIMESTAMP,
+    Valor_Distancia FLOAT,
+    Posicao_ID INTEGER REFERENCES Posicoes(ID)
+);
+
+CREATE TABLE Medicoes (
+    ID SERIAL PRIMARY KEY,
+    Data_Hora TIMESTAMP,
+    Maquina_ID INTEGER REFERENCES Maquinas(ID),
+    Posicao_Leitura_ID INTEGER REFERENCES Posicoes(ID),
+    Valor_Medicao_Superior FLOAT,
+    Valor_Medicao_Inferior FLOAT
+);
+
+ALTER TABLE Calibracoes
+ADD COLUMN Maquina_ID INTEGER;
+
+ALTER TABLE Calibracoes
+ADD CONSTRAINT fk_Maquina_ID
+FOREIGN KEY (Maquina_ID) REFERENCES Maquinas(ID);

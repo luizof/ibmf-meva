@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta http-equiv="refresh" content="15">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css">
+    <title>Monitoramento</title>
+    <script src="/static/chart.min.js"></script>
+    <script src="/static/script.js"></script> <!-- Inclua o arquivo script.js -->
+</head>
+<body>
+    {% for machine in machines %}
+    <div id="machine-name-{{ loop.index }}" class="machine-name {% if machine.out_of_limits %}out-of-limits{% endif %}">
+        <h1>{{ machine.name }}</h1>
+    </div>
+    <canvas id="chart-{{ loop.index }}" width="400" height="50"></canvas>
+    <script>
+        createChart(
+            'chart-{{ loop.index }}',
+            {{ machine.labels|tojson }},
+            {{ machine.limits.upper }},
+            {{ machine.limits.lower }},
+            {{ machine.graph_data|tojson }}
+        );
+    </script>
+    {% endfor %}
+</body>
+</html>

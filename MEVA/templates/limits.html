@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="/static/style.css">
+    <title>Configuração de Limites</title>
+</head>
+<body>
+    <div class="machine-grid">
+        {% for machine_name, lower_limit, upper_limit, machine_id in machine_limits %}
+        <div class="machine-block">
+            <h3>{{ machine_name }}</h3>
+            <p>Limite inferior: {{ lower_limit }}</p>
+            <p>Limite superior: {{ upper_limit }}</p>
+            <div class="button-group">
+                <a href="{{ url_for('set_limits', machine_id=machine_id, limit=2) }}" class="limit-button">2mm</a>
+                <a href="{{ url_for('set_limits', machine_id=machine_id, limit=3) }}" class="limit-button">3mm</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</body>
+</html>

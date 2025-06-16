@@ -1,0 +1,6 @@
+banco de dados:
+
+user: 		postgres
+password:	banco@mep
+nome do banco:	BD_MEP
+porta: 		5432

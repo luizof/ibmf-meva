@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Sensor</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Editar Sensor</h1>
+    <div class="form-container">
+        <form method="post">
+            <label for="endereco_ip">Endereço IP:</label>
+            <input type="text" id="endereco_ip" name="endereco_ip" value="{{ sensor[1] }}" required>
+            <label for="maquina">Máquina:</label>
+            <select id="maquina" name="maquina" required>
+                {% for maquina in maquinas %}
+                <option value="{{ maquina[0] }}" {% if maquina[0] == sensor[2] %}selected{% endif %}>{{ maquina[1] }}</option>
+                {% endfor %}
+            </select>
+            <label for="posicao">Posição:</label>
+            <select id="posicao" name="posicao" required>
+                {% for posicao in posicoes %}
+                <option value="{{ posicao[0] }}" {% if posicao[0] == sensor[3] %}selected{% endif %}>{{ posicao[1] }}</option>
+                {% endfor %}
+            </select>
+            <label for="e_superior">É Superior?</label>
+            <input type="checkbox" id="e_superior" name="e_superior" {% if sensor[4] %}checked{% endif %}>
+            <input type="submit" value="Salvar">
+        </form>
+        <a href="{{ url_for('sensores') }}">Voltar</a>
+    </div>
+</body>
+</html>

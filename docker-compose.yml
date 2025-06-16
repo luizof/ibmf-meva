@@ -1,0 +1,38 @@
+version: '3.9'
+
+services:
+  db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: BD_MEP
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: banco@mep
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/create_tables.sql:/docker-entrypoint-initdb.d/create_tables.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      retries: 5
+    networks:
+      - meva-net
+
+  web:
+    build: .
+    ports:
+      - "4999:4999"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://postgres:banco@mep@db:5432/BD_MEP
+    networks:
+      - meva-net
+
+volumes:
+  postgres_data:
+
+networks:
+  meva-net:

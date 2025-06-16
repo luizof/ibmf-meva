@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Monitoramento de Sensores</title>
+</head>
+<body>
+    <h1>Monitoramento de Sensores</h1>
+    {% for machine in machines %}
+        <h2>Máquina: {{ machine[1] }}</h2>
+        <p>{{ machine[2] }}</p>
+        {% for position in positions %}
+            <h3>Posição: {{ position[1] }}</h3>
+            <p>{{ position[2] }}</p>
+            {% for sensor in sensors %}
+                {% if sensor[2] == machine[0] and sensor[3] == position[0] %}
+                    <div class="sensor">
+                        <p>Sensor {{ "Superior" if sensor[4] else "Inferior" }}: 
+                            <span class="{{ sensor[5] }}">{{ "Conectado" if sensor[5] == 'connected' else "Desconectado" }}</span>
+                        </p>
+                    </div>
+                {% endif %}
+            {% endfor %}
+        {% endfor %}
+    {% endfor %}
+</body>
+</html>

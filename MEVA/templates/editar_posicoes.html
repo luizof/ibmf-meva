@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Editar Posição</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>Editar Posição</h1>
+    <div class="form-container">
+        <form method="post">
+            <label for="nome_posicao">Nome da Posição:</label>
+            <input type="text" id="nome_posicao" name="nome_posicao" value="{{ posicao[1] }}" required>
+            <label for="descricao_posicao">Descrição da Posição:</label>
+            <textarea id="descricao_posicao" name="descricao_posicao" required>{{ posicao[2] }}</textarea>
+            <input type="submit" value="Salvar">
+        </form>
+        <a href="{{ url_for('posicoes') }}">Voltar</a>
+    </div>
+</body>
+</html>

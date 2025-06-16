@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Calibrações</title>
+</head>
+<body>
+    <h1>Calibrações</h1>
+    {% for machine_data in calibration_data %}
+        <h2>Máquina: {{ machine_data.machine[1] }}</h2>
+        {% for position_data in machine_data.positions %}
+            <h3>Posição: {{ position_data.position[1] }}</h3>
+            {% if not position_data.has_sensors %}
+                <p>Sensores não instalados</p>
+            {% elif not position_data.sensors_connected %}
+                <p>Sensores desconectados</p>
+            {% else %}
+                <p>Data da última calibração: {{ position_data.last_calibration }}</p>
+                <a href="{{ url_for('calibrate', position_id=position_data.position[0], machine_id=machine_data.machine[0]) }}" class="calibrate-button">Calibrar</a>
+            {% endif %}
+        {% endfor %}
+    {% endfor %}
+</body>
+</html>
