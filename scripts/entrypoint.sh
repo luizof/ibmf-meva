@@ -1,12 +1,16 @@
 #!/bin/bash
 set -e
 
+PGDATA=/var/lib/postgresql/data
+
 # initialize data directory if empty
-if [ ! -s /var/lib/postgresql/13/main/PG_VERSION ]; then
-    su postgres -c "/usr/lib/postgresql/13/bin/initdb -D /var/lib/postgresql/13/main"
+if [ ! -s "$PGDATA/PG_VERSION" ]; then
+    mkdir -p "$PGDATA"
+    chown postgres:postgres "$PGDATA"
+    su postgres -c "initdb -D $PGDATA"
 fi
 
-service postgresql start
+su postgres -c "pg_ctl -D $PGDATA -o '-c listen_addresses=*' -w start"
 
 # ensure postgres is ready
 until pg_isready -U postgres; do

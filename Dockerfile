@@ -6,7 +6,7 @@ WORKDIR /app
 
 # Instalar dependências do sistema
 RUN apt-get update && apt-get install -y \
-    libpq-dev gcc postgresql-13 postgresql-contrib-13 \
+    libpq-dev gcc postgresql postgresql-contrib \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar arquivo de requisitos e instalar dependências Python

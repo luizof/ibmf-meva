@@ -11,10 +11,10 @@ Para construir a imagem:
 docker build -t meva .
 ```
 
-A imagem fixa o PostgreSQL 13 para garantir consistência do caminho de dados.
-O diretório de dados utilizado pela imagem única é `/var/lib/postgresql/13/main`.
-No `docker-compose.yml` usa-se a imagem oficial do Postgres, cujo volume padrão é
-`/var/lib/postgresql/data`.
+A imagem instala o PostgreSQL disponível na distribuição.
+O diretório de dados utilizado pela imagem única é `/var/lib/postgresql/data`.
+No `docker-compose.yml` usa-se a imagem oficial do Postgres, cujo volume padrão
+também é `/var/lib/postgresql/data`.
 
 E para executar:
 
@@ -27,7 +27,7 @@ dados do container:
 
 ```
 docker run -p 80:80 \
-  -v $(pwd)/pgdata:/var/lib/postgresql/13/main \
+  -v $(pwd)/pgdata:/var/lib/postgresql/data \
   meva
 ```
 
