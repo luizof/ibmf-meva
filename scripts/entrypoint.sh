@@ -1,6 +1,11 @@
 #!/bin/bash
 set -e
 
+# initialize data directory if empty
+if [ ! -s /var/lib/postgresql/13/main/PG_VERSION ]; then
+    su postgres -c "/usr/lib/postgresql/13/bin/initdb -D /var/lib/postgresql/13/main"
+fi
+
 service postgresql start
 
 # ensure postgres is ready
