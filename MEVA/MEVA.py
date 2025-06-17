@@ -3,6 +3,7 @@ import psycopg2
 from psycopg2 import sql
 import config
 import webbrowser
+import os
 from time import sleep
 import threading
 import time
@@ -608,8 +609,9 @@ def open_urls():
 
 
 if __name__ == '__main__':
-    # Start the URLs opening in a separate thread
-    threading.Thread(target=open_urls).start()
+    # Optionally open the web interface when running locally
+    if os.environ.get('OPEN_BROWSER_ON_STARTUP') == '1':
+        threading.Thread(target=open_urls).start()
 
     # Start the measurement threads (if needed)
     start_measurement_threads()
