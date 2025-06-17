@@ -121,13 +121,8 @@ def start_measurement_threads():
 
 # Conexão com o banco de dados
 def get_db_conn():
-    conn = psycopg2.connect(
-        host=config.DB_HOST,
-        dbname=config.DB_NAME,
-        user=config.DB_USER,
-        password=config.DB_PASS
-    )
-    return conn
+    """Wrapper around :func:`database.connect` for backward compatibility."""
+    return database.connect()
 
 def get_maquinas():
     conn = get_db_conn()
