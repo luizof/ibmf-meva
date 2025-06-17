@@ -39,6 +39,8 @@ import database
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 app = Flask(__name__)
+# Ensure JSON responses handle Unicode characters correctly
+app.config["JSON_AS_ASCII"] = False
 
 def measure_sensor_pair(sensor_pair):
     machine_id = sensor_pair[2]
@@ -125,7 +127,8 @@ def get_db_conn():
         host=config.DB_HOST,
         dbname=config.DB_NAME,
         user=config.DB_USER,
-        password=config.DB_PASS
+        password=config.DB_PASS,
+        options='-c client_encoding=UTF8'
     )
     return conn
 
