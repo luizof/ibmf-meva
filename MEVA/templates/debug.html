@@ -18,6 +18,25 @@
     </select>
     <p>Leitura Atual: <span id="reading">--</span></p>
 
+    <h2>Status do Banco de Dados</h2>
+    {% if connection_status %}
+        <p class="connected">Conectado com sucesso.</p>
+        <table>
+            <tr>
+                <th>Tabela</th>
+                <th>Linhas</th>
+            </tr>
+            {% for table, count in table_counts.items() %}
+            <tr>
+                <td>{{ table }}</td>
+                <td>{{ count }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    {% else %}
+        <p class="disconnected">Falha ao conectar ao banco de dados.</p>
+    {% endif %}
+
     <script>
         const select = document.getElementById('sensor');
         const reading = document.getElementById('reading');
