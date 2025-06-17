@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   db:
-    image: postgres:13
+    image: postgres
     environment:
       POSTGRES_DB: BD_MEP
       POSTGRES_USER: postgres
