@@ -34,6 +34,7 @@ from collections import defaultdict
 import concurrent.futures
 import logging
 
+import database
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 app = Flask(__name__)
@@ -539,8 +540,25 @@ def limits_():
 
 @app.route('/debug')
 def debug_page():
-    sensors = queries.get_sensors()
-    return render_template('debug.html', sensors=sensors)
+    connection_status = False
+    table_counts = {}
+    sensors = []
+    try:
+        conn = database.connect()
+        connection_status = True
+        cur = conn.cursor()
+        tables = ['Maquinas', 'Posicoes', 'Sensores', 'Calibracoes', 'Medicoes']
+        for table in tables:
+            cur.execute(sql.SQL("SELECT COUNT(*) FROM {};").format(sql.Identifier(table)))
+            table_counts[table] = cur.fetchone()[0]
+        sensors = queries.get_sensors()
+        cur.close()
+        conn.close()
+    except Exception:
+        connection_status = False
+        table_counts = {}
+        sensors = []
+    return render_template('debug.html', sensors=sensors, connection_status=connection_status, table_counts=table_counts)
 
 
 @app.route('/sensor_reading/<int:sensor_id>')
