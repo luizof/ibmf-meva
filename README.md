@@ -11,6 +11,8 @@ Para construir a imagem:
 docker build -t meva .
 ```
 
+A imagem fixa o PostgreSQL 13 para garantir consistência do caminho de dados.
+
 E para executar:
 
 ```
