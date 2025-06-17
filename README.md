@@ -36,3 +36,4 @@ esteja vazio.
 
 O container inicia o PostgreSQL, cria o banco `BD_MEP` com as tabelas definidas em
 `scripts/create_tables.sql` e em seguida executa a aplicação Flask.
+Para evitar problemas de codificacao, o `docker-compose.yml` define a variavel `POSTGRES_INITDB_ARGS` com `--encoding=UTF8`. Assim o cluster do PostgreSQL e inicializado em UTF-8 e aceita corretamente dados com acentuacao.
