@@ -543,7 +543,11 @@ def debug_page():
         conn = database.connect()
         connection_status = True
         cur = conn.cursor()
-        tables = ['Maquinas', 'Posicoes', 'Sensores', 'Calibracoes', 'Medicoes']
+        # Table names in the database are created without quotes and thus are
+        # stored in lowercase. ``sql.Identifier`` preserves the case when
+        # quoting, so we must use the lowercase names here to avoid errors
+        # like ``relation "Maquinas" does not exist`` when querying.
+        tables = ['maquinas', 'posicoes', 'sensores', 'calibracoes', 'medicoes']
         for table in tables:
             cur.execute(sql.SQL("SELECT COUNT(*) FROM {};").format(sql.Identifier(table)))
             table_counts[table] = cur.fetchone()[0]
