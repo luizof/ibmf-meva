@@ -411,7 +411,10 @@ def view_h():
         machine_id = machine[0]
 
         labels_set_dt = set()
-        all_thickness_data = defaultdict(lambda: [None, None]) # Inicializando com None para posições faltantes
+        # Cada timestamp pode ter um valor por posição. Use uma lista do
+        # tamanho de ``positions`` para acomodar todas as posições,
+        # evitando erros quando houver mais de duas posições cadastradas.
+        all_thickness_data = defaultdict(lambda: [None] * len(positions))
 
         for position_index, position in enumerate(positions):  # Iterate over all positions
             position_id = position[0]
@@ -459,7 +462,10 @@ def view():
         machine_id = machine[0]
 
         labels_set_dt = set()
-        all_thickness_data = defaultdict(lambda: [None, None]) # Inicializando com None para posições faltantes
+        # ``positions`` pode possuir mais de duas entradas. Inicialize cada
+        # timestamp com uma lista do tamanho correto para armazenar a espessura
+        # de todas as posições.
+        all_thickness_data = defaultdict(lambda: [None] * len(positions))
 
         for position_index, position in enumerate(positions):  # Iterate over all positions
             position_id = position[0]
