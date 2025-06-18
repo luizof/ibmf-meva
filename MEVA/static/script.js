@@ -61,3 +61,58 @@ function createChart(elementId, labels, upperLimit, lowerLimit, graphData) {
         }
     });
 }
+
+function createMiniChart(elementId, labels, upperLimit, lowerLimit, values) {
+    var ctx = document.getElementById(elementId).getContext('2d');
+    var chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: 'Espessura',
+                    borderColor: '#059bff',
+                    data: values,
+                    spanGaps: true,
+                    fill: false,
+                    cubicInterpolationMode: 'monotone',
+                    tension: 0.1,
+                    pointRadius: 0
+                },
+                {
+                    label: 'Limite Superior',
+                    data: Array(labels.length).fill(upperLimit),
+                    borderColor: 'red',
+                    borderWidth: 1,
+                    fill: false,
+                    pointRadius: 0
+                },
+                {
+                    label: 'Limite Inferior',
+                    data: Array(labels.length).fill(lowerLimit),
+                    borderColor: 'red',
+                    borderWidth: 1,
+                    fill: false,
+                    pointRadius: 0
+                }
+            ]
+        },
+        options: {
+            animation: false,
+            scales: {
+                y: {
+                    min: (lowerLimit - 0.5),
+                    max: (upperLimit + 0.5)
+                },
+                x: {
+                    ticks: {
+                        autoSkip: true,
+                        maxTicksLimit: 10,
+                        maxRotation: 0,
+                        minRotation: 0
+                    }
+                }
+            }
+        }
+    });
+}

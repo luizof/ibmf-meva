@@ -36,6 +36,22 @@ def get_last_60_minutes_measurements(machine_id, position_id):
     conn.close()
     return result
 
+def get_last_minutes_measurements(machine_id, position_id, minutes):
+    conn = connect()
+    cur = conn.cursor()
+    query = (
+        "SELECT ID, date_trunc('second', Data_Hora), Maquina_ID, Posicao_Leitura_ID, "
+        "Valor_Medicao_Superior, Valor_Medicao_Inferior "
+        "FROM Medicoes "
+        "WHERE Maquina_ID = %s AND Posicao_Leitura_ID = %s AND "
+        f"Data_Hora > NOW() - INTERVAL '{minutes} minutes' "
+        "ORDER BY Data_Hora ASC;"
+    )
+    cur.execute(query, (machine_id, position_id))
+    result = cur.fetchall()
+    conn.close()
+    return result
+
 
 def get_calibrations(machine_id, position_id):
     conn = connect()

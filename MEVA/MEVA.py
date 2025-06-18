@@ -511,6 +511,106 @@ def view():
     return render_template('index_view.html', machines=machine_data)
 
 
+@app.route('/mobile')
+def mobile_view():
+    machines = queries.get_machines()
+    positions = queries.get_positions()
+    limit_data = limits.load_limits()
+
+    machine_data = []
+    now = datetime.now()
+
+    for machine in machines:
+        machine_id = machine[0]
+        machine_limits = limit_data.get(str(machine_id), {'lower': 1, 'upper': 4})
+
+        thickness_per_timestamp = defaultdict(list)
+        last_15 = []
+        last_30 = []
+        last_60 = []
+        all_values = []
+        latest_val = None
+        latest_time = None
+
+        for position in positions:
+            position_id = position[0]
+            measurements = queries.get_last_minutes_measurements(machine_id, position_id, 180)
+            calibrations = queries.get_calibrations(machine_id, position_id)
+
+            calibration_index = 0
+            calibration_value = 0
+
+            for measurement in measurements:
+                m_time = measurement[1]
+                while calibration_index < len(calibrations) and calibrations[calibration_index][0] <= m_time:
+                    calibration_value = calibrations[calibration_index][1]
+                    calibration_index += 1
+
+                thickness = calibration_value - measurement[4] - measurement[5]
+                thickness_per_timestamp[m_time].append(thickness)
+                all_values.append(thickness)
+
+                if now - m_time <= timedelta(minutes=15):
+                    last_15.append(thickness)
+                if now - m_time <= timedelta(minutes=30):
+                    last_30.append(thickness)
+                if now - m_time <= timedelta(minutes=60):
+                    last_60.append(thickness)
+
+                if latest_time is None or m_time > latest_time:
+                    latest_time = m_time
+                    latest_val = thickness
+
+        times_15 = sorted([t for t in thickness_per_timestamp if now - t <= timedelta(minutes=15)])
+        labels = [t.strftime('%H:%M') for t in times_15]
+        values = [sum(thickness_per_timestamp[t]) / len(thickness_per_timestamp[t]) for t in times_15]
+
+        def avg(lst):
+            return sum(lst) / len(lst) if lst else None
+
+        def std(lst):
+            m = avg(lst)
+            return (sum((x - m) ** 2 for x in lst) / len(lst)) ** 0.5 if lst else None
+
+        avg15 = avg(last_15)
+        avg30 = avg(last_30)
+        avg60 = avg(last_60)
+        avg3h = avg(all_values)
+        sd = std(all_values)
+        max_v = max(all_values) if all_values else None
+        min_v = min(all_values) if all_values else None
+        freq = len(last_60) / 60 if last_60 else 0
+
+        sup_count = len([v for v in last_60 if v > machine_limits['upper']])
+        inf_count = len([v for v in last_60 if v < machine_limits['lower']])
+        perc_inconf = ((sup_count + inf_count) / len(last_60) * 100) if last_60 else 0
+        out_limits = False
+        if latest_val is not None:
+            out_limits = latest_val < machine_limits['lower'] or latest_val > machine_limits['upper']
+
+        machine_data.append({
+            'name': machine[1],
+            'current': latest_val,
+            'labels': labels,
+            'values': values,
+            'limits': machine_limits,
+            'avg15': avg15,
+            'avg30': avg30,
+            'avg60': avg60,
+            'avg3h': avg3h,
+            'sup': sup_count,
+            'inf': inf_count,
+            'perc': perc_inconf,
+            'std_dev': sd,
+            'max': max_v,
+            'min': min_v,
+            'freq': freq,
+            'out_of_limits': out_limits,
+        })
+
+    return render_template('mobile.html', machines=machine_data)
+
+
 
 @app.route('/update/<machine_id>/<timestamp>')
 def update(machine_id, timestamp):
