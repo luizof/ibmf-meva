@@ -548,6 +548,21 @@ def mobile_view():
                     latest_time = m_time
                     latest_val = thickness
 
+            if not measurements:
+                last = queries.get_last_measurement(machine_id, position_id)
+                if last:
+                    m_time = last[1]
+                    calibration_value = 0
+                    for cal in calibrations:
+                        if cal[0] <= m_time:
+                            calibration_value = cal[1]
+                        else:
+                            break
+                    thickness = calibration_value - last[4] - last[5]
+                    if latest_time is None or m_time > latest_time:
+                        latest_time = m_time
+                        latest_val = thickness
+
         times_15 = sorted([t for t in thickness_per_timestamp if now - t <= timedelta(minutes=15)])
         labels = [t.strftime('%H:%M') for t in times_15]
         values = [sum(thickness_per_timestamp[t]) / len(thickness_per_timestamp[t]) for t in times_15]

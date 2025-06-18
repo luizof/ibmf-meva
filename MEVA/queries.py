@@ -52,6 +52,22 @@ def get_last_minutes_measurements(machine_id, position_id, minutes):
     conn.close()
     return result
 
+def get_last_measurement(machine_id, position_id):
+    """Return the most recent measurement for a given machine and position."""
+    conn = connect()
+    cur = conn.cursor()
+    query = (
+        "SELECT ID, date_trunc('second', Data_Hora), Maquina_ID, Posicao_Leitura_ID, "
+        "Valor_Medicao_Superior, Valor_Medicao_Inferior "
+        "FROM Medicoes "
+        "WHERE Maquina_ID = %s AND Posicao_Leitura_ID = %s "
+        "ORDER BY Data_Hora DESC LIMIT 1;"
+    )
+    cur.execute(query, (machine_id, position_id))
+    result = cur.fetchone()
+    conn.close()
+    return result
+
 
 def get_calibrations(machine_id, position_id):
     conn = connect()
