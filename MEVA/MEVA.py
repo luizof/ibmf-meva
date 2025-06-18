@@ -668,27 +668,6 @@ def homepage():
     return render_template('homepage.html')
 
 
-def open_urls():
-    urls_old = [
-        'http://127.0.0.1/maquinas',
-        'http://127.0.0.1/posicoes',
-        'http://127.0.0.1/sensores',
-        'http://127.0.0.1/status',
-        'http://127.0.0.1/calibrations',
-        'http://127.0.0.1/view_h',
-        'http://127.0.0.1/view',
-        'http://127.0.0.1/limits_'
-    ]
-
-    urls = [
-        'http://127.0.0.1/'
-    ]
-
-    for url in urls:
-        webbrowser.open(url)
-        sleep(0.2)
-
-
 if __name__ == '__main__':
     # Optionally open the web interface when running locally
     if os.environ.get('OPEN_BROWSER_ON_STARTUP') == '1':
