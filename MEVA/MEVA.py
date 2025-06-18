@@ -72,7 +72,7 @@ def measure_sensor_pair(sensor_pair):
             inferior_distances.append(inferior_distance)
 
         # Se ambas as listas tiverem 5 valores, processe e insira no banco
-        if len(superior_distances) == 11 and len(inferior_distances) == 11:
+        if len(superior_distances) >= 11 and len(inferior_distances) >= 11:
             # Remover valores extremos e calcular a média
             superior_distances.remove(max(superior_distances))
             superior_distances.remove(max(superior_distances))
