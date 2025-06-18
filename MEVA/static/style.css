@@ -241,3 +241,27 @@ a {
 .back-button:hover {
     background-color: #0056b3;
 }
+
+.mobile-card {
+    background-color: #007bff;
+    color: white;
+    margin-bottom: 10px;
+    border-radius: 5px;
+}
+
+.mobile-card.out-of-limits {
+    background-color: #ff4069;
+}
+
+.mobile-card .card-header {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px;
+    cursor: pointer;
+}
+
+.mobile-card .card-body {
+    background-color: white;
+    color: black;
+    padding: 10px;
+}

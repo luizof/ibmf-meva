@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='chart.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <title>Monitoramento Mobile</title>
+</head>
+<body>
+    <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
+    {% for machine in machines %}
+    <div class="mobile-card {% if machine.out_of_limits %}out-of-limits{% endif %}">
+        <div class="card-header" onclick="toggleCard('card-{{ loop.index }}')">
+            <span><strong>{{ machine.name }}</strong></span>
+            <span>{{ machine.current|round(2) if machine.current is not none else 'N/A' }}</span>
+        </div>
+        <div class="card-body" id="card-{{ loop.index }}" style="display: none;">
+            <div class="graph-section">
+                <canvas id="chart-{{ loop.index }}" height="100"></canvas>
+            </div>
+            <div class="stats-section">
+                <h4>Médias</h4>
+                <p>Últimos 15 min: {{ machine.avg15|round(2) if machine.avg15 is not none else 'N/A' }}</p>
+                <p>Últimos 30 min: {{ machine.avg30|round(2) if machine.avg30 is not none else 'N/A' }}</p>
+                <p>Últimos 60 min: {{ machine.avg60|round(2) if machine.avg60 is not none else 'N/A' }}</p>
+                <p>Últimas 3 horas: {{ machine.avg3h|round(2) if machine.avg3h is not none else 'N/A' }}</p>
+            </div>
+            <div class="stats-section">
+                <h4>Qualidade</h4>
+                <p>Inconformidade limite sup.: {{ machine.sup }}</p>
+                <p>Inconformidade limite inf.: {{ machine.inf }}</p>
+                <p>% inconformidade (1h): {{ machine.perc|round(2) }}%</p>
+            </div>
+            <div class="stats-section">
+                <h4>Estatísticas</h4>
+                <p>Desvio padrão: {{ machine.std_dev|round(2) if machine.std_dev is not none else 'N/A' }}</p>
+                <p>Espessura máxima: {{ machine.max|round(2) if machine.max is not none else 'N/A' }}</p>
+                <p>Espessura mínima: {{ machine.min|round(2) if machine.min is not none else 'N/A' }}</p>
+                <p>Frequência média (medições/min): {{ machine.freq|round(2) }}</p>
+            </div>
+        </div>
+    </div>
+    <script>
+        createMiniChart('chart-{{ loop.index }}',
+            {{ machine.labels|tojson }},
+            {{ machine.limits.upper }},
+            {{ machine.limits.lower }},
+            {{ machine.values|tojson }});
+    </script>
+    {% endfor %}
+    <script>
+    function toggleCard(id) {
+        var el = document.getElementById(id);
+        if (el.style.display === 'none') {
+            el.style.display = 'block';
+        } else {
+            el.style.display = 'none';
+        }
+    }
+    </script>
+</body>
+</html>
