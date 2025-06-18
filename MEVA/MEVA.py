@@ -1,41 +1,22 @@
-from flask import Flask, render_template, request, redirect, url_for
-import psycopg2
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 from psycopg2 import sql
-import config
-import webbrowser
-import os
-from time import sleep
-import threading
-import time
-from datetime import datetime
-from get_distance import get_distance
-from fast_get_distance import fast_get_distance
-from queries import get_sensor_pairs, insert_measurement
-from flask import Flask, render_template, request, redirect, url_for
-import psycopg2
-import config
-from flask import Flask, render_template, request, redirect, url_for
-import psycopg2
-import config
-from flask import Flask, render_template, request
-from queries import get_machines, get_positions, get_sensors, update_sensor_status, get_last_calibration,get_latest_measurement, insert_calibration
+from datetime import datetime, timedelta
 from decimal import Decimal
-from datetime import datetime
-import time
-from flask import Flask, render_template, jsonify, request
-import queries
-import config
-import limits
-from datetime import datetime,timedelta
-from flask import Flask, render_template, redirect, url_for
-import limits
-import threading
-import webbrowser
+from time import sleep
 from collections import defaultdict
 import concurrent.futures
 import logging
+import os
+import threading
+import time
+import webbrowser
 
+import config
 import database
+import limits
+import queries
+from fast_get_distance import fast_get_distance
+from get_distance import get_distance
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 app = Flask(__name__)
@@ -96,7 +77,7 @@ def measure_sensor_pair(sensor_pair):
 
             timestamp = datetime.now()
             data = (timestamp, machine_id, position_id, superior_avg, inferior_avg)
-            insert_measurement(data)
+            queries.insert_measurement(data)
             logging.info(
                 f"Measurement inserted for machine {machine_id}, position {position_id}: "
                 f"sup={superior_avg:.2f} inf={inferior_avg:.2f}"
@@ -109,7 +90,7 @@ def measure_sensor_pair(sensor_pair):
             time.sleep(0.2)
 
 def start_measurement_threads():
-    sensor_pairs = get_sensor_pairs()
+    sensor_pairs = queries.get_sensor_pairs()
     logging.info(f"Found {len(sensor_pairs)} sensor pair(s)")
     for pair in sensor_pairs:
         machine_id = pair[2]
@@ -321,16 +302,16 @@ def remover_sensor(id):
 
 @app.route('/status')
 def status():
-    sensors = get_sensors()
+    sensors = queries.get_sensors()
     for sensor in sensors:
         sensor_ip = sensor[1]
         distance = fast_get_distance(sensor_ip,8899)
         status = "connected" if distance is not None else "disconnected"
-        update_sensor_status(sensor[0], status)
+        queries.update_sensor_status(sensor[0], status)
     
-    machines = get_machines()
-    positions = get_positions()
-    sensors = get_sensors() # Refresh sensor data after updating status
+    machines = queries.get_machines()
+    positions = queries.get_positions()
+    sensors = queries.get_sensors()  # Refresh sensor data after updating status
     return render_template('index_status.html', machines=machines, positions=positions, sensors=sensors)
 
 
@@ -372,7 +353,7 @@ def calibrate(machine_id, position_id):
 
         # Espere pela próxima entrada de dados
         while True:
-            latest_measurement = get_latest_measurement(machine_id, position_id, timestamp)
+            latest_measurement = queries.get_latest_measurement(machine_id, position_id, timestamp)
             if latest_measurement:
                 logging.info(
                     f"Measurement found for calibration: sup={latest_measurement[4]} inf={latest_measurement[5]}"
@@ -387,7 +368,7 @@ def calibrate(machine_id, position_id):
         calibration_value = superior_distance + inferior_distance + block_thickness
 
         # Insira a calibração no banco de dados
-        insert_calibration((datetime.now(), calibration_value, position_id, machine_id))
+        queries.insert_calibration((datetime.now(), calibration_value, position_id, machine_id))
 
         return render_template('calibration_completed.html')
 
