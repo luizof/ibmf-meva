@@ -29,7 +29,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://postgres:banco@mep@db:5432/BD_MEP
+      DATABASE_URL: postgres://postgres:banco%40mep@db:5432/BD_MEP
     networks:
       - meva-net
 
