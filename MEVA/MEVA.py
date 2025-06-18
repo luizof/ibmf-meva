@@ -618,11 +618,6 @@ def mobile_view():
 
 
 
-@app.route('/update/<machine_id>/<timestamp>')
-def update(machine_id, timestamp):
-    # Logic to get the latest data for a specific machine and timestamp
-    # Returns a JSON response with the new data
-    pass
 
 @app.route('/limits_')
 def limits_():
