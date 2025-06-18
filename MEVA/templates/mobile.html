@@ -47,7 +47,7 @@
             {{ machine.labels|tojson }},
             {{ machine.limits.upper }},
             {{ machine.limits.lower }},
-            {{ machine.values|tojson }});
+            {{ machine['values']|tojson }});
     </script>
     {% endfor %}
     <script>
