@@ -1,4 +1,5 @@
 from pymodbus.client.sync import ModbusTcpClient
+import config
 
 def get_distance(IP_ADDRESS, PORT):
     # Conectando ao servidor MODBUS
@@ -61,7 +62,7 @@ def get_distance(IP_ADDRESS, PORT):
 
 # Exemplo de uso:
 IP_ADDRESS = '192.168.1.182'
-PORT = 8899
+PORT = config.SENSOR_PORT
 distance_mm = get_distance(IP_ADDRESS, PORT)
 if distance_mm is not None:
     print("Distância:", distance_mm, "mm")

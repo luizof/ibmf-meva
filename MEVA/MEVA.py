@@ -56,7 +56,7 @@ def measure_sensor_pair(sensor_pair):
 
         # Função auxiliar para obter a distância
         def fetch_distance(ip):
-            return get_distance(ip, 8899)
+            return get_distance(ip, config.SENSOR_PORT)
 
         # Use ThreadPoolExecutor para executar as chamadas de forma paralela
         with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -324,7 +324,7 @@ def status():
     sensors = get_sensors()
     for sensor in sensors:
         sensor_ip = sensor[1]
-        distance = fast_get_distance(sensor_ip,8899)
+        distance = fast_get_distance(sensor_ip, config.SENSOR_PORT)
         status = "connected" if distance is not None else "disconnected"
         update_sensor_status(sensor[0], status)
     
@@ -673,7 +673,7 @@ def sensor_reading(sensor_id):
     value = None
     if sensor:
         ip = sensor[1]
-        value = fast_get_distance(ip, 8899)
+        value = fast_get_distance(ip, config.SENSOR_PORT)
     return jsonify({'value': value})
 
 

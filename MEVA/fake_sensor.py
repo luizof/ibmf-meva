@@ -1,6 +1,7 @@
 from pymodbus.server.sync import StartTcpServer
 from pymodbus.datastore import ModbusSequentialDataBlock
 from pymodbus.datastore import ModbusSlaveContext, ModbusServerContext
+import config
 
 # Definindo o valor que será retornado (50.0mm)
 value_to_return_mm = 50.0
@@ -21,7 +22,7 @@ block = ModbusSequentialDataBlock(0x0000, [register1, register2] + [0] * 100)
 store = ModbusSlaveContext(ir=block)
 context = ModbusServerContext(slaves=store, single=True)
 # Porta para o servidor escutar
-port = 8899
+port = config.SENSOR_PORT
 
 # Iniciando o servidor na porta especificada
 StartTcpServer(context, address=("0.0.0.0", port))
