@@ -6,10 +6,8 @@ from time import sleep
 from collections import defaultdict
 import concurrent.futures
 import logging
-import os
 import threading
 import time
-import webbrowser
 
 import config
 import database
@@ -684,10 +682,6 @@ def homepage():
 
 
 if __name__ == '__main__':
-    # Optionally open the web interface when running locally
-    if os.environ.get('OPEN_BROWSER_ON_STARTUP') == '1':
-        threading.Thread(target=open_urls).start()
-
     # Start the measurement threads (if needed)
     start_measurement_threads()
 
