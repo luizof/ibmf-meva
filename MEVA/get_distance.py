@@ -7,7 +7,7 @@ import logging
 def get_distance(IP_ADDRESS, PORT):
     start_time = time.time()
     # Conectando ao servidor MODBUS
-    client = ModbusTcpClient(IP_ADDRESS, port=PORT)
+    client = ModbusTcpClient(IP_ADDRESS, port=PORT, timeout=1)
 
     # Lista para armazenar as distâncias obtidas
     distances = []
@@ -18,7 +18,7 @@ def get_distance(IP_ADDRESS, PORT):
         if client.connect():
             errors = 0
             for _ in range(26):
-                time.sleep(0.02)
+                time.sleep(0.03)
                 # Enviando o comando
                 response = client.read_input_registers(address=0x0000, count=2, unit=0x01)
 

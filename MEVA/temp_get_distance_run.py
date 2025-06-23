@@ -3,7 +3,7 @@ import logging
 
 def get_distance(IP_ADDRESS, PORT):
     # Conectando ao servidor MODBUS
-    client = ModbusTcpClient(IP_ADDRESS, port=PORT)
+    client = ModbusTcpClient(IP_ADDRESS, port=PORT, timeout=1)
 
     # Lista para armazenar as distâncias obtidas
     distances = []
