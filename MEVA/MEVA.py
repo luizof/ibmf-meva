@@ -87,7 +87,7 @@ def measure_sensor_pair(sensor_pair):
             superior_avg = sum(superior_distances) / len(superior_distances)
             inferior_avg = sum(inferior_distances) / len(inferior_distances)
 
-            timestamp = datetime.now()
+            timestamp = datetime.utcnow()
             data = (timestamp, machine_id, position_id, superior_avg, inferior_avg)
             queries.insert_measurement(data)
             logging.info(
@@ -360,7 +360,7 @@ def calibrations():
 def calibrate(machine_id, position_id):
     if request.method == 'POST':
         block_thickness = Decimal(request.form['block_thickness']).quantize(Decimal('0.00'))
-        timestamp = datetime.now()
+        timestamp = datetime.utcnow()
 
         logging.info(
             f"Calibration requested for machine {machine_id}, position {position_id} at {timestamp}"
@@ -383,7 +383,7 @@ def calibrate(machine_id, position_id):
         calibration_value = superior_distance + inferior_distance + block_thickness
 
         # Insira a calibração no banco de dados
-        queries.insert_calibration((datetime.now(), calibration_value, position_id, machine_id))
+        queries.insert_calibration((datetime.utcnow(), calibration_value, position_id, machine_id))
 
         return render_template('calibration_completed.html')
 
@@ -486,7 +486,7 @@ def view():
         graph_data = [(position[1], [all_thickness_data[label][position_index] for label in labels_dt]) for position_index, position in enumerate(positions)]
         machine_limits = limit_data.get(str(machine_id), {'lower': 1, 'upper': 4})
 
-        time_threshold = datetime.now() - timedelta(seconds=60)
+        time_threshold = datetime.utcnow() - timedelta(seconds=60)
 
         out_of_limits = False
         
@@ -520,7 +520,7 @@ def mobile_view():
     limit_data = limits.load_limits()
 
     machine_data = []
-    now = datetime.now()
+    now = datetime.utcnow()
 
     for machine in machines:
         machine_id = machine[0]
