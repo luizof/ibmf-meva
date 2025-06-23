@@ -61,7 +61,6 @@ def get_distance(IP_ADDRESS, PORT):
 
             # Calculando a média das distâncias restantes
             average_distance = sum(distances) / len(distances)
-            print("Retornando Distância Bruta do Sensor: ", average_distance, "mm. No IP: ", IP_ADDRESS, " no momento: ", datetime.now()," com ",len(distances),"/26 leituras")
             logging.info(
                 f"get_distance success for {IP_ADDRESS} in {time.time() - start_time:.2f}s"
             )
