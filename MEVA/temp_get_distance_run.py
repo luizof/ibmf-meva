@@ -1,4 +1,5 @@
 from pymodbus.client.sync import ModbusTcpClient
+import logging
 
 def get_distance(IP_ADDRESS, PORT):
     # Conectando ao servidor MODBUS
@@ -16,7 +17,7 @@ def get_distance(IP_ADDRESS, PORT):
 
             # Verificando se a resposta é válida
             if response.isError():
-                print("Erro na resposta:", response)
+                logging.info("Erro na resposta: %s", response)
                 errors += 1
                 continue
             else:
@@ -40,7 +41,7 @@ def get_distance(IP_ADDRESS, PORT):
 
         # Se houve mais de um certo número de erros, pode ser melhor retornar None ou algum tipo de aviso
         if errors > 3:  # Escolhendo 3 como um limite arbitrário
-            print("Muitos erros nas leituras!")
+            logging.info("Muitos erros nas leituras!")
             return None
 
         # Removendo um percentual das leituras nas extremidades
@@ -55,7 +56,7 @@ def get_distance(IP_ADDRESS, PORT):
         return average_distance
 
     else:
-        print("Falha na conexão")
+        logging.info("Falha na conexão")
         return None
 
 
@@ -64,6 +65,6 @@ IP_ADDRESS = '192.168.1.182'
 PORT = 8899
 distance_mm = get_distance(IP_ADDRESS, PORT)
 if distance_mm is not None:
-    print("Distância:", distance_mm, "mm")
+    logging.info("Distância: %s mm", distance_mm)
 else:
-    print("Não foi possível obter a distância")
+    logging.info("Não foi possível obter a distância")

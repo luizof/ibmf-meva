@@ -24,7 +24,7 @@ def get_distance(IP_ADDRESS, PORT):
 
                 # Verificando se a resposta é válida
                 if response.isError():
-                    print("Erro na resposta:", response)
+                    logging.info("Erro na resposta: %s", response)
                     errors += 1
                     continue
                 else:
@@ -45,12 +45,12 @@ def get_distance(IP_ADDRESS, PORT):
 
             # Fechando a conexão
             client.close()
-            print("conexão fechada, 80 tentativas e ")
-            print(errors)
-            print(" erros.")
+            logging.info("conexão fechada, 80 tentativas e ")
+            logging.info(errors)
+            logging.info(" erros.")
             # Se houve mais de um certo número de erros, pode ser melhor retornar None ou algum tipo de aviso
             if errors > 25:  # Escolhendo 3 como um limite arbitrário
-                print("Muitos erros nas leituras!")
+                logging.info("Muitos erros nas leituras!")
                 return None
 
             # Removendo um percentual das leituras nas extremidades
@@ -70,14 +70,14 @@ def get_distance(IP_ADDRESS, PORT):
             logging.warning(
                 f"Falha na conexão com {IP_ADDRESS} após {time.time() - start_time:.2f}s"
             )
-            print("Falha na conexão")
+            logging.info("Falha na conexão")
             return None
 
     except Exception as e:  # Captura qualquer exceção
         logging.error(
             f"Erro ao tentar obter a distância de {IP_ADDRESS}: {e}. Tempo decorrido {time.time() - start_time:.2f}s"
         )
-        print(f"Erro ao tentar obter a distância: {e}")
+        logging.info("Erro ao tentar obter a distância: %s", e)
         return None
 
 
