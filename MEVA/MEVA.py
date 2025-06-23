@@ -34,8 +34,6 @@ def measure_sensor_pair(sensor_pair):
         superior_ip = sensor_pair[1]
         inferior_ip = sensor_pair[7]
 
-        #print(f"Superior IP: {superior_ip}, Inferior IP: {inferior_ip}") # Imprimir IPs
-
         # Função auxiliar para obter a distância
         def fetch_distance(ip):
             return get_distance(ip, 8899)
