@@ -398,10 +398,13 @@ def view_h():
     machine_data = []
     
     datetime_str = request.args.get('datetime')
-    start_time = None
     if datetime_str:
         start_time = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M")
-        end_time = start_time + timedelta(minutes=60)
+    else:
+        # If no date was provided, default to the last hour
+        start_time = datetime.now() - timedelta(hours=1)
+
+    end_time = start_time + timedelta(minutes=60)
 
     for machine in machines:
         machine_id = machine[0]
@@ -583,15 +586,10 @@ def mobile_view():
         values = [sum(thickness_per_timestamp[t]) / len(thickness_per_timestamp[t]) for t in times_15]
 
         logging.info(
-            f"Mobile view data for machine {machine_id}: labels={labels}, values={values}"
-        )
-
-        logging.info(
-            f"Mobile view data for machine {machine_id}: labels={labels}, values={values}"
-        )
-
-        logging.info(
-            f"Mobile view data for machine {machine_id}: labels={labels}, values={values}"
+            "Mobile view data for machine %s: labels=%s, values=%s",
+            machine_id,
+            labels,
+            values,
         )
 
         def avg(lst):
