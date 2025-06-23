@@ -2,8 +2,10 @@ from pymodbus.client.sync import ModbusTcpClient
 from time import sleep
 import time
 from datetime import datetime
+import logging
 
 def get_distance(IP_ADDRESS, PORT):
+    start_time = time.time()
     # Conectando ao servidor MODBUS
     client = ModbusTcpClient(IP_ADDRESS, port=PORT)
 
@@ -60,13 +62,22 @@ def get_distance(IP_ADDRESS, PORT):
             # Calculando a média das distâncias restantes
             average_distance = sum(distances) / len(distances)
             print("Retornando Distância Bruta do Sensor: ", average_distance, "mm. No IP: ", IP_ADDRESS, " no momento: ", datetime.now()," com ",len(distances),"/26 leituras")
+            logging.info(
+                f"get_distance success for {IP_ADDRESS} in {time.time() - start_time:.2f}s"
+            )
             return average_distance
 
         else:
+            logging.warning(
+                f"Falha na conexão com {IP_ADDRESS} após {time.time() - start_time:.2f}s"
+            )
             print("Falha na conexão")
             return None
 
     except Exception as e:  # Captura qualquer exceção
+        logging.error(
+            f"Erro ao tentar obter a distância de {IP_ADDRESS}: {e}. Tempo decorrido {time.time() - start_time:.2f}s"
+        )
         print(f"Erro ao tentar obter a distância: {e}")
         return None
 
