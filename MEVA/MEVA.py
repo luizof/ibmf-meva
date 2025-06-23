@@ -27,6 +27,8 @@ def measure_sensor_pair(sensor_pair):
     superior_distances = []
     inferior_distances = []
 
+    loop_start = time.time()
+
     while True:
         
         superior_ip = sensor_pair[1]
