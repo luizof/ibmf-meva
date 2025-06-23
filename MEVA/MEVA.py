@@ -47,6 +47,11 @@ def measure_sensor_pair(sensor_pair):
             inferior_distance = inferior_future.result()
 
         logging.info(
+            f"Fetched distances for machine {machine_id}, position {position_id}: "
+            f"sup={superior_distance} inf={inferior_distance}"
+        )
+
+        logging.info(
             f"Distance fetch for machine {machine_id}, position {position_id} took {time.time() - loop_start:.2f}s"
         )
 
@@ -575,6 +580,10 @@ def mobile_view():
         times_15 = sorted([t for t in thickness_per_timestamp if now - t <= timedelta(minutes=15)])
         labels = [t.strftime('%H:%M') for t in times_15]
         values = [sum(thickness_per_timestamp[t]) / len(thickness_per_timestamp[t]) for t in times_15]
+
+        logging.info(
+            f"Mobile view data for machine {machine_id}: labels={labels}, values={values}"
+        )
 
         def avg(lst):
             return sum(lst) / len(lst) if lst else None
