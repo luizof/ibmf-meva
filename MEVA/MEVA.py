@@ -28,7 +28,7 @@ def measure_sensor_pair(sensor_pair):
     inferior_distances = []
 
     while True:
-        loop_start = time.time()
+        
         superior_ip = sensor_pair[1]
         inferior_ip = sensor_pair[7]
 
@@ -96,7 +96,7 @@ def measure_sensor_pair(sensor_pair):
             logging.info(
                 f"Full cycle for machine {machine_id}, position {position_id} took {time.time() - loop_start:.2f}s"
             )
-
+            loop_start = time.time()
             # Limpar as listas para o próximo conjunto de 5 valores
             superior_distances.clear()
             inferior_distances.clear()
