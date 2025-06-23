@@ -39,6 +39,7 @@ def measure_sensor_pair(sensor_pair):
             return get_distance(ip, 8899)
 
         # Use ThreadPoolExecutor para executar as chamadas de forma paralela
+        
         with concurrent.futures.ThreadPoolExecutor() as executor:
             superior_future = executor.submit(fetch_distance, superior_ip)
             inferior_future = executor.submit(fetch_distance, inferior_ip)
@@ -580,6 +581,10 @@ def mobile_view():
         times_15 = sorted([t for t in thickness_per_timestamp if now - t <= timedelta(minutes=15)])
         labels = [t.strftime('%H:%M') for t in times_15]
         values = [sum(thickness_per_timestamp[t]) / len(thickness_per_timestamp[t]) for t in times_15]
+
+        logging.info(
+            f"Mobile view data for machine {machine_id}: labels={labels}, values={values}"
+        )
 
         logging.info(
             f"Mobile view data for machine {machine_id}: labels={labels}, values={values}"
