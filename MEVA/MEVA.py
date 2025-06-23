@@ -590,6 +590,10 @@ def mobile_view():
             f"Mobile view data for machine {machine_id}: labels={labels}, values={values}"
         )
 
+        logging.info(
+            f"Mobile view data for machine {machine_id}: labels={labels}, values={values}"
+        )
+
         def avg(lst):
             return sum(lst) / len(lst) if lst else None
 
