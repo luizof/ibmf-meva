@@ -18,7 +18,7 @@ def get_distance(IP_ADDRESS, PORT):
         if client.connect():
             errors = 0
             for _ in range(26):
-                time.sleep(0.03)
+                time.sleep(0.02)
                 # Enviando o comando
                 response = client.read_input_registers(address=0x0000, count=2, unit=0x01)
 
@@ -45,9 +45,6 @@ def get_distance(IP_ADDRESS, PORT):
 
             # Fechando a conexão
             client.close()
-            logging.info("conexão fechada, 80 tentativas e ")
-            logging.info(errors)
-            logging.info(" erros.")
             # Se houve mais de um certo número de erros, pode ser melhor retornar None ou algum tipo de aviso
             if errors > 25:  # Escolhendo 3 como um limite arbitrário
                 logging.info("Muitos erros nas leituras!")
