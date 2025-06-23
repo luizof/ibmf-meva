@@ -27,18 +27,19 @@ def measure_sensor_pair(sensor_pair):
     superior_distances = []
     inferior_distances = []
 
+    loop_start = time.time()
+
     while True:
-        loop_start = time.time()
+        
         superior_ip = sensor_pair[1]
         inferior_ip = sensor_pair[7]
-
-        #print(f"Superior IP: {superior_ip}, Inferior IP: {inferior_ip}") # Imprimir IPs
 
         # Função auxiliar para obter a distância
         def fetch_distance(ip):
             return get_distance(ip, 8899)
 
         # Use ThreadPoolExecutor para executar as chamadas de forma paralela
+        
         with concurrent.futures.ThreadPoolExecutor() as executor:
             superior_future = executor.submit(fetch_distance, superior_ip)
             inferior_future = executor.submit(fetch_distance, inferior_ip)
@@ -64,7 +65,7 @@ def measure_sensor_pair(sensor_pair):
             )
 
         # Se ambas as listas tiverem 5 valores, processe e insira no banco
-        if len(superior_distances) >= 11 and len(inferior_distances) >= 11:
+        if len(superior_distances) == 11 and len(inferior_distances) == 11:
             # Remover valores extremos e calcular a média
             superior_distances.remove(max(superior_distances))
             superior_distances.remove(max(superior_distances))
@@ -96,7 +97,7 @@ def measure_sensor_pair(sensor_pair):
             logging.info(
                 f"Full cycle for machine {machine_id}, position {position_id} took {time.time() - loop_start:.2f}s"
             )
-
+            loop_start = time.time()
             # Limpar as listas para o próximo conjunto de 5 valores
             superior_distances.clear()
             inferior_distances.clear()
@@ -580,6 +581,14 @@ def mobile_view():
         times_15 = sorted([t for t in thickness_per_timestamp if now - t <= timedelta(minutes=15)])
         labels = [t.strftime('%H:%M') for t in times_15]
         values = [sum(thickness_per_timestamp[t]) / len(thickness_per_timestamp[t]) for t in times_15]
+
+        logging.info(
+            f"Mobile view data for machine {machine_id}: labels={labels}, values={values}"
+        )
+
+        logging.info(
+            f"Mobile view data for machine {machine_id}: labels={labels}, values={values}"
+        )
 
         logging.info(
             f"Mobile view data for machine {machine_id}: labels={labels}, values={values}"

@@ -1,4 +1,5 @@
 from pymodbus.client.sync import ModbusTcpClient
+import logging
 
 def fast_get_distance(IP_ADDRESS, PORT):
     # Conectando ao servidor MODBUS
@@ -14,7 +15,7 @@ def fast_get_distance(IP_ADDRESS, PORT):
 
         # Verificando se a resposta é válida
         if response.isError():
-            print("Erro na resposta:", response)
+            logging.info("Erro na resposta: %s", response)
             return None
         else:
             # Combinando os dois registros de 16 bits
@@ -34,7 +35,7 @@ def fast_get_distance(IP_ADDRESS, PORT):
 
             return distance_mm
     else:
-        print("Falha na conexão")
+        logging.info("Falha na conexão")
         return None
 
 # Exemplo de uso:
