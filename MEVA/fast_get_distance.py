@@ -3,7 +3,7 @@ import logging
 
 def fast_get_distance(IP_ADDRESS, PORT):
     # Conectando ao servidor MODBUS
-    client = ModbusTcpClient(IP_ADDRESS, port=PORT)
+    client = ModbusTcpClient(IP_ADDRESS, port=PORT, timeout=1)
 
     # Se a conexão for bem-sucedida
     if client.connect():
