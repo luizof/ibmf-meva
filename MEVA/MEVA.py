@@ -28,6 +28,7 @@ def measure_sensor_pair(sensor_pair):
     inferior_distances = []
 
     while True:
+        loop_start = time.time()
         superior_ip = sensor_pair[1]
         inferior_ip = sensor_pair[7]
 
@@ -45,10 +46,17 @@ def measure_sensor_pair(sensor_pair):
             superior_distance = superior_future.result()
             inferior_distance = inferior_future.result()
 
+        logging.info(
+            f"Distance fetch for machine {machine_id}, position {position_id} took {time.time() - loop_start:.2f}s"
+        )
+
         # Adicionar as distâncias às listas
         if superior_distance is not None and inferior_distance is not None:
             superior_distances.append(superior_distance)
             inferior_distances.append(inferior_distance)
+            logging.info(
+                f"Accumulated {len(superior_distances)}/11 readings for machine {machine_id}, position {position_id}"
+            )
 
         # Se ambas as listas tiverem 5 valores, processe e insira no banco
         if len(superior_distances) >= 11 and len(inferior_distances) >= 11:
@@ -79,6 +87,9 @@ def measure_sensor_pair(sensor_pair):
             logging.info(
                 f"Measurement inserted for machine {machine_id}, position {position_id}: "
                 f"sup={superior_avg:.2f} inf={inferior_avg:.2f}"
+            )
+            logging.info(
+                f"Full cycle for machine {machine_id}, position {position_id} took {time.time() - loop_start:.2f}s"
             )
 
             # Limpar as listas para o próximo conjunto de 5 valores
