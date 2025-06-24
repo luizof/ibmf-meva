@@ -9,10 +9,16 @@
     <script src="{{ url_for('static', filename='chart.min.js') }}"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </head>
-<form action="/view_h" method="get">
+<form action="/view_h" method="get" id="history-form">
     <label for="datetime">Selecione a data e hora:</label>
-    <input type="datetime-local" id="datetime" name="datetime">
+    <input type="datetime-local" id="datetime" name="datetime" value="{{ selected_datetime }}">
     <input type="submit" value="Ver histórico">
+    <div class="button-group">
+        <button type="button" onclick="moveHistory(-60)">-60 min</button>
+        <button type="button" onclick="moveHistory(-30)">-30 min</button>
+        <button type="button" onclick="moveHistory(30)">+30 min</button>
+        <button type="button" onclick="moveHistory(60)">+60 min</button>
+    </div>
 </form>
 <body>
     <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
