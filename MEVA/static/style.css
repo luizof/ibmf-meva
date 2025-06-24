@@ -171,9 +171,11 @@ input[type="submit"]:hover {
     color: black;
     padding: 10px;
 }
+
 @media (max-width: 768px) {
     .mobile-card .graph-section canvas {
         height: 300px !important;
     }
 }
+
 
