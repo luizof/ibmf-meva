@@ -13,12 +13,13 @@
         {% for machine_name, lower_limit, upper_limit, machine_id in machine_limits %}
         <div class="machine-block">
             <h3>{{ machine_name }}</h3>
-            <p>Limite inferior: {{ lower_limit }}</p>
-            <p>Limite superior: {{ upper_limit }}</p>
-            <div class="button-group">
-                <a href="{{ url_for('set_limits', machine_id=machine_id, limit=2) }}" class="limit-button">2mm</a>
-                <a href="{{ url_for('set_limits', machine_id=machine_id, limit=3) }}" class="limit-button">3mm</a>
-            </div>
+            <form method="post" action="{{ url_for('set_limits', machine_id=machine_id) }}">
+                <label for="lower_{{ machine_id }}">Limite inferior:</label>
+                <input type="number" step="0.1" name="lower_limit" id="lower_{{ machine_id }}" value="{{ lower_limit }}">
+                <label for="upper_{{ machine_id }}">Limite superior:</label>
+                <input type="number" step="0.1" name="upper_limit" id="upper_{{ machine_id }}" value="{{ upper_limit }}">
+                <input type="submit" value="Salvar" class="limit-button">
+            </form>
         </div>
         {% endfor %}
     </div>

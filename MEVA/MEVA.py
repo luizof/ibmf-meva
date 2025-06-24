@@ -447,7 +447,10 @@ def view_h():
             'name': machine[1],
             'graph_data': graph_data,
             'labels': labels,
-            'limits': limit_data.get(str(machine_id), {'lower': 1, 'upper': 4}),
+            'limits': limit_data.get(
+                str(machine_id),
+                {'lower': limits.DEFAULT_LOWER, 'upper': limits.DEFAULT_UPPER},
+            ),
         })
 
     return render_template('index_view_h.html', machines=machine_data)
@@ -491,7 +494,10 @@ def view():
         
         labels_dt = sorted(list(labels_set_dt))
         graph_data = [(position[1], [all_thickness_data[label][position_index] for label in labels_dt]) for position_index, position in enumerate(positions)]
-        machine_limits = limit_data.get(str(machine_id), {'lower': 1, 'upper': 4})
+        machine_limits = limit_data.get(
+            str(machine_id),
+            {'lower': limits.DEFAULT_LOWER, 'upper': limits.DEFAULT_UPPER},
+        )
 
         time_threshold = datetime.utcnow() - timedelta(seconds=60)
 
@@ -513,7 +519,10 @@ def view():
             'name': machine[1],
             'graph_data': graph_data,
             'labels': labels,
-            'limits': limit_data.get(str(machine_id), {'lower': 1, 'upper': 4}),
+            'limits': limit_data.get(
+                str(machine_id),
+                {'lower': limits.DEFAULT_LOWER, 'upper': limits.DEFAULT_UPPER},
+            ),
             'out_of_limits': out_of_limits,
         })
 
@@ -531,7 +540,10 @@ def mobile_view():
 
     for machine in machines:
         machine_id = machine[0]
-        machine_limits = limit_data.get(str(machine_id), {'lower': 1, 'upper': 4})
+        machine_limits = limit_data.get(
+            str(machine_id),
+            {'lower': limits.DEFAULT_LOWER, 'upper': limits.DEFAULT_UPPER},
+        )
 
         thickness_per_timestamp = defaultdict(list)
         last_15 = []
@@ -653,8 +665,12 @@ def limits_():
     for machine in machines:
         machine_id_str = str(machine[0])
         machine_name = machine[1]
-        lower_limit = limit_data.get(machine_id_str, {}).get('lower', 'Não definido')
-        upper_limit = limit_data.get(machine_id_str, {}).get('upper', 'Não definido')
+        lower_limit = limit_data.get(
+            machine_id_str, {}
+        ).get('lower', limits.DEFAULT_LOWER)
+        upper_limit = limit_data.get(
+            machine_id_str, {}
+        ).get('upper', limits.DEFAULT_UPPER)
         machine_limits.append((machine_name, lower_limit, upper_limit, machine[0]))
 
     return render_template('limits.html', machine_limits=machine_limits)
@@ -697,12 +713,20 @@ def sensor_reading(sensor_id):
     return jsonify({'value': value})
 
 
-@app.route('/set_limits/<machine_id>/<float:limit>')
-def set_limits(machine_id, limit):
+@app.route('/set_limits/<machine_id>', methods=['POST'])
+def set_limits(machine_id):
+    lower = request.form.get('lower_limit', type=float)
+    upper = request.form.get('upper_limit', type=float)
+
+    if lower is None:
+        lower = limits.DEFAULT_LOWER
+    if upper is None:
+        upper = limits.DEFAULT_UPPER
+
     limit_data = limits.load_limits()
-    limit_data[machine_id] = {
-        'lower': limit - 0.2,
-        'upper': limit + 0.2
+    limit_data[str(machine_id)] = {
+        'lower': lower,
+        'upper': upper,
     }
     limits.save_limits(limit_data)
     return redirect(url_for('limits_'))
