@@ -408,6 +408,8 @@ def view_h():
         # If no date was provided, default to the last hour
         start_time = datetime.utcnow() - timedelta(hours=1)
 
+    selected_datetime = (start_time + LOCAL_TIME_OFFSET).strftime("%Y-%m-%dT%H:%M")
+
     end_time = start_time + timedelta(minutes=60)
 
     for machine in machines:
@@ -450,7 +452,7 @@ def view_h():
             'limits': limit_data.get(str(machine_id), {'lower': 1, 'upper': 4}),
         })
 
-    return render_template('index_view_h.html', machines=machine_data)
+    return render_template('index_view_h.html', machines=machine_data, selected_datetime=selected_datetime)
 
 
 @app.route('/view')

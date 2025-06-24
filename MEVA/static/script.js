@@ -153,3 +153,21 @@ function createMiniChart(elementId, labels, upperLimit, lowerLimit, values) {
         }
     });
 }
+
+function formatLocalDateTime(dt) {
+    var year = dt.getFullYear();
+    var month = String(dt.getMonth() + 1).padStart(2, '0');
+    var day = String(dt.getDate()).padStart(2, '0');
+    var hour = String(dt.getHours()).padStart(2, '0');
+    var minute = String(dt.getMinutes()).padStart(2, '0');
+    return year + '-' + month + '-' + day + 'T' + hour + ':' + minute;
+}
+
+function moveHistory(minutes) {
+    var input = document.getElementById('datetime');
+    var current = input.value;
+    var dt = current ? new Date(current) : new Date();
+    dt.setMinutes(dt.getMinutes() + minutes);
+    input.value = formatLocalDateTime(dt);
+    document.getElementById('history-form').submit();
+}
