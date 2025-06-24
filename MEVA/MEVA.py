@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 from psycopg2 import sql
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from time import sleep
 from collections import defaultdict
@@ -18,6 +18,9 @@ from get_distance import get_distance
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
 app = Flask(__name__)
+
+# Horário local (UTC-3) usado para exibir os gráficos
+LOCAL_TIME_OFFSET = timedelta(hours=-3)
 
 def measure_sensor_pair(sensor_pair):
     machine_id = sensor_pair[2]
@@ -399,10 +402,11 @@ def view_h():
     
     datetime_str = request.args.get('datetime')
     if datetime_str:
-        start_time = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M")
+        # O horário informado é considerado local (UTC-3). Converta para UTC para consultar o banco.
+        start_time = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M") - LOCAL_TIME_OFFSET
     else:
         # If no date was provided, default to the last hour
-        start_time = datetime.now() - timedelta(hours=1)
+        start_time = datetime.utcnow() - timedelta(hours=1)
 
     end_time = start_time + timedelta(minutes=60)
 
@@ -437,7 +441,7 @@ def view_h():
 
         labels_dt = sorted(list(labels_set_dt))
         graph_data = [(position[1], [all_thickness_data[label][position_index] for label in labels_dt]) for position_index, position in enumerate(positions)]
-        labels = [label.strftime('%H:%M:%S') for label in labels_dt]
+        labels = [(label + LOCAL_TIME_OFFSET).strftime('%H:%M:%S') for label in labels_dt]
 
         machine_data.append({
             'name': machine[1],
@@ -503,7 +507,7 @@ def view():
             if out_of_limits:
                 break 
 
-        labels = [label.strftime('%H:%M:%S') for label in labels_dt]
+        labels = [(label + LOCAL_TIME_OFFSET).strftime('%H:%M:%S') for label in labels_dt]
 
         machine_data.append({
             'name': machine[1],
@@ -582,7 +586,7 @@ def mobile_view():
                         latest_val = thickness
 
         times_15 = sorted([t for t in thickness_per_timestamp if now - t <= timedelta(minutes=15)])
-        labels = [t.strftime('%H:%M') for t in times_15]
+        labels = [(t + LOCAL_TIME_OFFSET).strftime('%H:%M') for t in times_15]
         values = [sum(thickness_per_timestamp[t]) / len(thickness_per_timestamp[t]) for t in times_15]
 
         logging.info(
