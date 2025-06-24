@@ -82,7 +82,11 @@ function createChart(elementId, labels, upperLimit, lowerLimit, graphData) {
 }
 
 function createMiniChart(elementId, labels, upperLimit, lowerLimit, values) {
-    var ctx = document.getElementById(elementId).getContext('2d');
+    var canvas = document.getElementById(elementId);
+    if (window.innerWidth <= 768) {
+        canvas.height = 300;
+    }
+    var ctx = canvas.getContext('2d');
 
     var dataMin = Infinity;
     var dataMax = -Infinity;
