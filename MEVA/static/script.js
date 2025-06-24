@@ -65,7 +65,7 @@ function createChart(elementId, labels, upperLimit, lowerLimit, graphData) {
             animation: false,
             scales: {
                 y: {
-                    min: Math.min(lowerLimit - 0.5, dataMin - 0.1),
+                    min: Math.max(0, Math.min(lowerLimit - 0.5, dataMin - 0.1)),
                     max: Math.max(upperLimit + 0.5, dataMax + 0.1)
                 },
                 x: {
@@ -138,7 +138,7 @@ function createMiniChart(elementId, labels, upperLimit, lowerLimit, values) {
             animation: false,
             scales: {
                 y: {
-                    min: Math.min(lowerLimit - 0.5, dataMin - 0.1),
+                    min: Math.max(0, Math.min(lowerLimit - 0.5, dataMin - 0.1)),
                     max: Math.max(upperLimit + 0.5, dataMax + 0.1)
                 },
                 x: {
