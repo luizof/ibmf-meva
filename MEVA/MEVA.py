@@ -399,18 +399,20 @@ def view_h():
     limit_data = limits.load_limits()
 
     machine_data = []
-    
+
+    hours = int(request.args.get('hours', 1))
+
     datetime_str = request.args.get('datetime')
     if datetime_str:
         # O horário informado é considerado local (UTC-3). Converta para UTC para consultar o banco.
         start_time = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M") - LOCAL_TIME_OFFSET
     else:
-        # If no date was provided, default to the last hour
-        start_time = datetime.utcnow() - timedelta(hours=1)
+        # If no date was provided, default to the last ``hours`` hours
+        start_time = datetime.utcnow() - timedelta(hours=hours)
 
     selected_datetime = (start_time + LOCAL_TIME_OFFSET).strftime("%Y-%m-%dT%H:%M")
 
-    end_time = start_time + timedelta(minutes=60)
+    end_time = start_time + timedelta(hours=hours)
 
     for machine in machines:
         machine_id = machine[0]
@@ -455,7 +457,12 @@ def view_h():
             ),
         })
 
-    return render_template('index_view_h.html', machines=machine_data, selected_datetime=selected_datetime)
+    return render_template(
+        'index_view_h.html',
+        machines=machine_data,
+        selected_datetime=selected_datetime,
+        selected_hours=hours,
+    )
 
 
 @app.route('/view')

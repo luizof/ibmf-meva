@@ -175,3 +175,11 @@ function moveHistory(minutes) {
     input.value = formatLocalDateTime(dt);
     document.getElementById('history-form').submit();
 }
+
+function setRange(hours) {
+    var dt = new Date();
+    dt.setHours(dt.getHours() - hours);
+    document.getElementById('datetime').value = formatLocalDateTime(dt);
+    document.getElementById('hours').value = hours;
+    document.getElementById('history-form').submit();
+}
