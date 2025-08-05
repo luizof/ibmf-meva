@@ -12,12 +12,18 @@
 <form action="/view_h" method="get" id="history-form">
     <label for="datetime">Selecione a data e hora:</label>
     <input type="datetime-local" id="datetime" name="datetime" value="{{ selected_datetime }}">
+    <input type="hidden" id="hours" name="hours" value="{{ selected_hours }}">
     <input type="submit" value="Ver histórico">
     <div class="button-group">
         <button type="button" onclick="moveHistory(-60)">-60 min</button>
         <button type="button" onclick="moveHistory(-30)">-30 min</button>
         <button type="button" onclick="moveHistory(30)">+30 min</button>
         <button type="button" onclick="moveHistory(60)">+60 min</button>
+    </div>
+    <div class="button-group">
+        <button type="button" onclick="setRange(12)">12h</button>
+        <button type="button" onclick="setRange(24)">24h</button>
+        <button type="button" onclick="setRange(48)">48h</button>
     </div>
 </form>
 <body>
