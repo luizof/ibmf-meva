@@ -19,22 +19,23 @@
             <h2 class="month-label">{{ month_label }}</h2>
             <a class="month-btn" href="{{ url_for('view_h', month=next_month) }}">&rarr;</a>
         </div>
-        <div class="week-selector">
+        <div class="week-selector" title="Limita o alcance máximo da barra de seleção">
             {% for n in range(1, num_weeks + 1) %}
             <button type="button"
-                    class="week-btn{% if n <= active_week %} active{% endif %}"
+                    class="week-btn{% if n <= selected_weeks %} active{% endif %}"
                     data-week="{{ n }}"
                     onclick="selectWeek({{ n }})">S{{ n }}</button>
             {% endfor %}
         </div>
         <input type="hidden" name="month" value="{{ month_year }}">
+        <input type="hidden" name="weeks" id="weeks-input" value="{{ selected_weeks }}">
         <div class="range-slider">
             <div class="range-track">
                 <div class="range-fill" id="range-fill"></div>
             </div>
-            <input type="range" min="0" max="{{ total_minutes }}" step="1"
+            <input type="range" min="0" max="{{ week_max_minutes }}" step="1"
                    name="start_min" id="start-min" value="{{ start_min }}">
-            <input type="range" min="0" max="{{ total_minutes }}" step="1"
+            <input type="range" min="0" max="{{ week_max_minutes }}" step="1"
                    name="end_min" id="end-min" value="{{ end_min }}">
         </div>
         <div class="range-display">
@@ -64,14 +65,38 @@
         var MEVA_totalMinutes = {{ total_minutes }};
         var MEVA_weekMinutes = {{ week_minutes }};
         var MEVA_numWeeks = {{ num_weeks }};
+        // Current max of the slider (in minutes since start of month), driven
+        // by the week selector. Updated live by selectWeek().
+        var MEVA_weekMaxMinutes = {{ week_max_minutes }};
+
+        function updateWeekButtons(n) {
+            document.querySelectorAll('.week-btn').forEach(function (btn) {
+                var k = parseInt(btn.getAttribute('data-week'), 10);
+                if (k <= n) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
 
         function selectWeek(n) {
+            MEVA_weekMaxMinutes = Math.min(n * MEVA_weekMinutes, MEVA_totalMinutes);
+            document.getElementById('weeks-input').value = n;
             var startInput = document.getElementById('start-min');
             var endInput = document.getElementById('end-min');
-            var endMin = Math.min(n * MEVA_weekMinutes, MEVA_totalMinutes);
-            startInput.value = 0;
-            endInput.value = endMin;
-            document.getElementById('history-form').submit();
+            startInput.max = MEVA_weekMaxMinutes;
+            endInput.max = MEVA_weekMaxMinutes;
+            // Clamp current values to the new window
+            var s = parseInt(startInput.value, 10);
+            var e = parseInt(endInput.value, 10);
+            if (s > MEVA_weekMaxMinutes) s = MEVA_weekMaxMinutes;
+            if (e > MEVA_weekMaxMinutes) e = MEVA_weekMaxMinutes;
+            if (s > e) s = e;
+            startInput.value = s;
+            endInput.value = e;
+            updateWeekButtons(n);
+            window.__MEVA_updateRange && window.__MEVA_updateRange();
         }
 
         (function () {
@@ -81,31 +106,12 @@
             var fill = document.getElementById('range-fill');
             var startLabel = document.getElementById('range-start-label');
             var endLabel = document.getElementById('range-end-label');
-            var weekButtons = document.querySelectorAll('.week-btn');
 
             function formatAt(minutes) {
                 var d = new Date(monthStart.getTime() + minutes * 60000);
                 var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
                 return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' +
                        pad(d.getHours()) + ':' + pad(d.getMinutes());
-            }
-
-            function highlightWeeks(s, e) {
-                // Highlight S1..SN when start is 0, where N is the week that
-                // contains ``e``. When ``s`` is not at the beginning, nothing
-                // is highlighted.
-                var active = 0;
-                if (s === 0 && e > 0) {
-                    active = Math.min(MEVA_numWeeks, Math.ceil(e / MEVA_weekMinutes));
-                }
-                weekButtons.forEach(function (btn) {
-                    var n = parseInt(btn.getAttribute('data-week'), 10);
-                    if (n <= active) {
-                        btn.classList.add('active');
-                    } else {
-                        btn.classList.remove('active');
-                    }
-                });
             }
 
             function update() {
@@ -117,12 +123,16 @@
                 }
                 startLabel.textContent = formatAt(s);
                 endLabel.textContent = formatAt(e);
-                var leftPct = (s / MEVA_totalMinutes) * 100;
-                var widthPct = ((e - s) / MEVA_totalMinutes) * 100;
+                // Fill position is drawn relative to the week playground, not
+                // the whole month, so the visible track corresponds to what
+                // the slider can actually select.
+                var denom = MEVA_weekMaxMinutes || 1;
+                var leftPct = (s / denom) * 100;
+                var widthPct = ((e - s) / denom) * 100;
                 fill.style.left = leftPct + '%';
                 fill.style.width = widthPct + '%';
-                highlightWeeks(s, e);
             }
+            window.__MEVA_updateRange = update;
 
             startInput.addEventListener('input', update);
             endInput.addEventListener('input', update);
