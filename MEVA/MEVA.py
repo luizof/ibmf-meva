@@ -659,6 +659,17 @@ def view_h():
 
     month_label = month_start_local.strftime('%B %Y')
 
+    # Week selector: 4 or 5 buttons depending on month length.
+    # Each "week" covers 7 days (except the last, which runs to the end of
+    # the month). ``active_week`` drives the highlighted prefix (S1..SN).
+    week_minutes = 7 * 24 * 60
+    days_in_month = (month_end_local - month_start_local).days
+    num_weeks = min(5, (days_in_month + 6) // 7)
+    if start_min == 0 and end_min > 0:
+        active_week = min(num_weeks, (end_min - 1) // week_minutes + 1)
+    else:
+        active_week = 0
+
     return render_template(
         'index_view_h.html',
         machines=machine_data,
@@ -671,6 +682,9 @@ def view_h():
         end_min=end_min,
         month_start_iso=month_start_local.strftime('%Y-%m-%dT%H:%M'),
         smoothing=smoothing,
+        num_weeks=num_weeks,
+        active_week=active_week,
+        week_minutes=week_minutes,
     )
 
 

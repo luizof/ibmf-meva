@@ -3,7 +3,7 @@
         <label class="smoothing-label">
             <input type="checkbox" name="enabled" id="smoothing-enabled" value="on"
                    {% if smoothing.enabled %}checked{% endif %}
-                   onchange="document.getElementById('smoothing-seconds-wrapper').style.display = this.checked ? 'inline-flex' : 'none';">
+                   onchange="handleSmoothingToggle(this);">
             Amortecimento
         </label>
         <span id="smoothing-seconds-wrapper" class="smoothing-seconds"
@@ -15,3 +15,18 @@
         </span>
     </form>
 </div>
+<script>
+    function handleSmoothingToggle(checkbox) {
+        var wrapper = document.getElementById('smoothing-seconds-wrapper');
+        var secondsInput = document.getElementById('smoothing-seconds');
+        if (checkbox.checked) {
+            // Just reveal the seconds field; user picks value and clicks Aplicar
+            wrapper.style.display = 'inline-flex';
+        } else {
+            // Secretly reset to 1s and apply immediately
+            wrapper.style.display = 'none';
+            secondsInput.value = 1;
+            document.getElementById('smoothing-form').submit();
+        }
+    }
+</script>

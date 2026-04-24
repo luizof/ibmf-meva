@@ -358,6 +358,35 @@ input[type="submit"]:hover {
     margin: 0;
 }
 
+.week-selector {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 8px 0 4px;
+    flex-wrap: wrap;
+}
+
+.week-btn {
+    min-width: 56px;
+    padding: 6px 12px;
+    border: 1px solid #007bff;
+    background: #fff;
+    color: #007bff;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.week-btn:hover {
+    background: #e8f1ff;
+}
+
+.week-btn.active {
+    background: #007bff;
+    color: #fff;
+}
+
 .range-slider {
     position: relative;
     height: 36px;
