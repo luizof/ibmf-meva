@@ -19,6 +19,14 @@
             <h2 class="month-label">{{ month_label }}</h2>
             <a class="month-btn" href="{{ url_for('view_h', month=next_month) }}">&rarr;</a>
         </div>
+        <div class="week-selector">
+            {% for n in range(1, num_weeks + 1) %}
+            <button type="button"
+                    class="week-btn{% if n <= active_week %} active{% endif %}"
+                    data-week="{{ n }}"
+                    onclick="selectWeek({{ n }})">S{{ n }}</button>
+            {% endfor %}
+        </div>
         <input type="hidden" name="month" value="{{ month_year }}">
         <div class="range-slider">
             <div class="range-track">
@@ -53,20 +61,51 @@
     {% endfor %}
 
     <script>
+        var MEVA_totalMinutes = {{ total_minutes }};
+        var MEVA_weekMinutes = {{ week_minutes }};
+        var MEVA_numWeeks = {{ num_weeks }};
+
+        function selectWeek(n) {
+            var startInput = document.getElementById('start-min');
+            var endInput = document.getElementById('end-min');
+            var endMin = Math.min(n * MEVA_weekMinutes, MEVA_totalMinutes);
+            startInput.value = 0;
+            endInput.value = endMin;
+            document.getElementById('history-form').submit();
+        }
+
         (function () {
             var monthStart = new Date('{{ month_start_iso }}:00');
-            var totalMinutes = {{ total_minutes }};
             var startInput = document.getElementById('start-min');
             var endInput = document.getElementById('end-min');
             var fill = document.getElementById('range-fill');
             var startLabel = document.getElementById('range-start-label');
             var endLabel = document.getElementById('range-end-label');
+            var weekButtons = document.querySelectorAll('.week-btn');
 
             function formatAt(minutes) {
                 var d = new Date(monthStart.getTime() + minutes * 60000);
                 var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
                 return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' +
                        pad(d.getHours()) + ':' + pad(d.getMinutes());
+            }
+
+            function highlightWeeks(s, e) {
+                // Highlight S1..SN when start is 0, where N is the week that
+                // contains ``e``. When ``s`` is not at the beginning, nothing
+                // is highlighted.
+                var active = 0;
+                if (s === 0 && e > 0) {
+                    active = Math.min(MEVA_numWeeks, Math.ceil(e / MEVA_weekMinutes));
+                }
+                weekButtons.forEach(function (btn) {
+                    var n = parseInt(btn.getAttribute('data-week'), 10);
+                    if (n <= active) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
+                    }
+                });
             }
 
             function update() {
@@ -78,10 +117,11 @@
                 }
                 startLabel.textContent = formatAt(s);
                 endLabel.textContent = formatAt(e);
-                var leftPct = (s / totalMinutes) * 100;
-                var widthPct = ((e - s) / totalMinutes) * 100;
+                var leftPct = (s / MEVA_totalMinutes) * 100;
+                var widthPct = ((e - s) / MEVA_totalMinutes) * 100;
                 fill.style.left = leftPct + '%';
                 fill.style.width = widthPct + '%';
+                highlightWeeks(s, e);
             }
 
             startInput.addEventListener('input', update);
