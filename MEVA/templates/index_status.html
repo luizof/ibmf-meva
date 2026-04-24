@@ -9,22 +9,37 @@
 <body>
     <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
     <h1>Monitoramento de Sensores</h1>
+    <div class="machine-cards">
     {% for machine in machines %}
-        <h2>Máquina: {{ machine[1] }}</h2>
-        <p>{{ machine[2] }}</p>
-        {% for position in positions %}
-            <h3>Posição: {{ position[1] }}</h3>
-            <p>{{ position[2] }}</p>
-            {% for sensor in sensors %}
-                {% if sensor[2] == machine[0] and sensor[3] == position[0] %}
-                    <div class="sensor">
-                        <p>Sensor {{ "Superior" if sensor[4] else "Inferior" }}: 
-                            <span class="{{ sensor[5] }}">{{ "Conectado" if sensor[5] == 'connected' else "Desconectado" }}</span>
-                        </p>
+        <section class="machine-card">
+            <header class="machine-card-header">
+                <h2>{{ machine[1] }}</h2>
+                {% if machine[2] %}<p class="machine-desc">{{ machine[2] }}</p>{% endif %}
+            </header>
+            <div class="position-grid">
+            {% for position in positions %}
+                {% set machine_sensors = sensors|selectattr(2, 'equalto', machine[0])|selectattr(3, 'equalto', position[0])|list %}
+                {% if machine_sensors %}
+                <div class="position-card">
+                    <h3>{{ position[1] }}</h3>
+                    {% if position[2] %}<p class="position-desc">{{ position[2] }}</p>{% endif %}
+                    <div class="sensor-pair-card">
+                        {% for sensor in machine_sensors %}
+                        <div class="sensor-row">
+                            <span class="sensor-label">{{ "Superior" if sensor[4] else "Inferior" }}</span>
+                            <span class="sensor-ip">{{ sensor[1] }}</span>
+                            <span class="badge badge-{{ sensor[5] }}">
+                                {{ "Conectado" if sensor[5] == 'connected' else "Desconectado" }}
+                            </span>
+                        </div>
+                        {% endfor %}
                     </div>
+                </div>
                 {% endif %}
             {% endfor %}
-        {% endfor %}
+            </div>
+        </section>
     {% endfor %}
+    </div>
 </body>
 </html>

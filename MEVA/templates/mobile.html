@@ -10,6 +10,7 @@
 </head>
 <body>
     <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
+    {% include '_smoothing_toggle.html' %}
     {% for machine in machines %}
     <div class="mobile-card {% if machine.out_of_limits %}out-of-limits{% endif %}">
         <div class="card-header" onclick="toggleCard('card-{{ loop.index }}')">
@@ -48,8 +49,8 @@
             {{ machine.limits.upper }},
             {{ machine.limits.lower }},
             {{ machine['values']|tojson }},
-            {{ graph_limits.lower }},
-            {{ graph_limits.upper }});
+            {{ machine.graph_limits.lower }},
+            {{ machine.graph_limits.upper }});
     </script>
     {% endfor %}
     <script>

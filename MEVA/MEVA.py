@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 from time import sleep
 from collections import defaultdict
+import calendar
 import concurrent.futures
 import logging
 import threading
@@ -22,6 +23,78 @@ app = Flask(__name__)
 # Horário local (UTC-3) usado para exibir os gráficos
 LOCAL_TIME_OFFSET = timedelta(hours=-3)
 
+# Total de leituras por ciclo de medição (3 maiores + 3 menores são descartados
+# em superior/inferior antes de calcular a média).
+READINGS_PER_CYCLE = 11
+
+# Estado compartilhado entre threads de medição e o Flask.
+# - ``measurement_progress``: (machine_id, position_id) -> {'count': int, 'total': int}
+#   atualizado em tempo real pela ``measure_sensor_pair``.
+# - ``pending_calibrations``: (machine_id, position_id) -> {
+#       'block_thickness': Decimal, 'timestamp': datetime,
+#       'status': 'waiting'|'done'|'error', 'value': Decimal|None,
+#       'error': str|None,
+#   }
+_state_lock = threading.Lock()
+measurement_progress = {}
+pending_calibrations = {}
+
+
+def _set_reading_count(machine_id, position_id, count):
+    with _state_lock:
+        measurement_progress[(machine_id, position_id)] = {
+            'count': count,
+            'total': READINGS_PER_CYCLE,
+        }
+
+
+def get_reading_progress(machine_id, position_id):
+    with _state_lock:
+        return dict(measurement_progress.get((machine_id, position_id), {'count': 0, 'total': READINGS_PER_CYCLE}))
+
+
+def apply_moving_average(timestamps, values, window_seconds):
+    """Return a list of moving averages over a sliding time window.
+
+    ``timestamps`` is a list of ``datetime`` instances; ``values`` is the
+    parallel list of numeric (or ``None``) samples. For each ``i``, the returned
+    element is the arithmetic mean of every non-None value whose timestamp lies
+    in ``[timestamps[i] - window, timestamps[i]]``. ``None`` inputs propagate as
+    ``None`` outputs so that gaps in the chart are preserved.
+    """
+    if not values or window_seconds <= 0:
+        return list(values)
+    window = timedelta(seconds=window_seconds)
+    out = []
+    for i, (ts, v) in enumerate(zip(timestamps, values)):
+        if v is None or ts is None:
+            out.append(None)
+            continue
+        cutoff = ts - window
+        total = 0.0
+        count = 0
+        # Walk backwards from the current index; stop as soon as we pass the
+        # window boundary. Safe for lists with None values interleaved.
+        for j in range(i, -1, -1):
+            tj = timestamps[j]
+            vj = values[j]
+            if tj is None:
+                continue
+            if tj < cutoff:
+                break
+            if vj is not None:
+                total += vj
+                count += 1
+        out.append(total / count if count else None)
+    return out
+
+
+def _smooth_series(timestamps, values, smoothing):
+    """Wrapper that only smooths if ``smoothing.enabled`` is true."""
+    if not smoothing or not smoothing.get('enabled'):
+        return values
+    return apply_moving_average(timestamps, values, smoothing.get('seconds', 30))
+
 def measure_sensor_pair(sensor_pair):
     machine_id = sensor_pair[2]
     position_id = sensor_pair[3]
@@ -29,6 +102,7 @@ def measure_sensor_pair(sensor_pair):
 
     superior_distances = []
     inferior_distances = []
+    _set_reading_count(machine_id, position_id, 0)
 
     loop_start = time.time()
 
@@ -63,8 +137,9 @@ def measure_sensor_pair(sensor_pair):
         if superior_distance is not None and inferior_distance is not None:
             superior_distances.append(superior_distance)
             inferior_distances.append(inferior_distance)
+            _set_reading_count(machine_id, position_id, len(superior_distances))
             logging.info(
-                f"Accumulated {len(superior_distances)}/11 readings for machine {machine_id}, position {position_id}"
+                f"Accumulated {len(superior_distances)}/{READINGS_PER_CYCLE} readings for machine {machine_id}, position {position_id}"
             )
 
         # Se ambas as listas tiverem 5 valores, processe e insira no banco
@@ -104,6 +179,7 @@ def measure_sensor_pair(sensor_pair):
             # Limpar as listas para o próximo conjunto de 5 valores
             superior_distances.clear()
             inferior_distances.clear()
+            _set_reading_count(machine_id, position_id, 0)
 
             time.sleep(0.2)
 
@@ -359,6 +435,41 @@ def calibrations():
 
 
 
+def _run_calibration(machine_id, position_id, block_thickness, timestamp):
+    """Run the blocking calibration logic in a background thread.
+
+    Waits for the next ``Medicao`` posted after ``timestamp`` by the measurement
+    thread, computes the calibration value and persists it. Updates the entry
+    in ``pending_calibrations`` so the polling endpoint can surface progress.
+    """
+    key = (machine_id, position_id)
+    try:
+        while True:
+            latest_measurement = queries.get_latest_measurement(machine_id, position_id, timestamp)
+            if latest_measurement:
+                break
+            time.sleep(0.5)
+
+        superior_distance = Decimal(latest_measurement[4])
+        inferior_distance = Decimal(latest_measurement[5])
+        calibration_value = superior_distance + inferior_distance + block_thickness
+        queries.insert_calibration((datetime.utcnow(), calibration_value, position_id, machine_id))
+
+        with _state_lock:
+            if key in pending_calibrations:
+                pending_calibrations[key]['status'] = 'done'
+                pending_calibrations[key]['value'] = float(calibration_value)
+        logging.info(
+            f"Calibration completed for machine {machine_id}, position {position_id}: value={calibration_value}"
+        )
+    except Exception as exc:  # noqa: BLE001
+        logging.exception("Calibration failed for machine %s, position %s", machine_id, position_id)
+        with _state_lock:
+            if key in pending_calibrations:
+                pending_calibrations[key]['status'] = 'error'
+                pending_calibrations[key]['error'] = str(exc)
+
+
 @app.route('/calibrate/<int:machine_id>/<int:position_id>', methods=['GET', 'POST'])
 def calibrate(machine_id, position_id):
     if request.method == 'POST':
@@ -369,93 +480,171 @@ def calibrate(machine_id, position_id):
             f"Calibration requested for machine {machine_id}, position {position_id} at {timestamp}"
         )
 
-        # Espere pela próxima entrada de dados
-        while True:
-            latest_measurement = queries.get_latest_measurement(machine_id, position_id, timestamp)
-            if latest_measurement:
-                logging.info(
-                    f"Measurement found for calibration: sup={latest_measurement[4]} inf={latest_measurement[5]}"
-                )
-                break
-            logging.debug("No measurement yet for calibration, waiting 1s")
-            time.sleep(1)
+        key = (machine_id, position_id)
+        with _state_lock:
+            pending_calibrations[key] = {
+                'block_thickness': block_thickness,
+                'timestamp': timestamp,
+                'status': 'waiting',
+                'value': None,
+                'error': None,
+            }
 
-        # Calcule o valor da calibração
-        superior_distance = Decimal(latest_measurement[4])
-        inferior_distance = Decimal(latest_measurement[5])
-        calibration_value = superior_distance + inferior_distance + block_thickness
+        thread = threading.Thread(
+            target=_run_calibration,
+            args=(machine_id, position_id, block_thickness, timestamp),
+            daemon=True,
+        )
+        thread.start()
 
-        # Insira a calibração no banco de dados
-        queries.insert_calibration((datetime.utcnow(), calibration_value, position_id, machine_id))
-
-        return render_template('calibration_completed.html')
+        return render_template(
+            'calibrate_progress.html',
+            machine_id=machine_id,
+            position_id=position_id,
+        )
 
     return render_template('calibrate.html', machine_id=machine_id, position_id=position_id)
+
+
+@app.route('/calibration_progress/<int:machine_id>/<int:position_id>')
+def calibration_progress(machine_id, position_id):
+    key = (machine_id, position_id)
+    progress = get_reading_progress(machine_id, position_id)
+    count = progress.get('count', 0)
+    total = progress.get('total', READINGS_PER_CYCLE) or READINGS_PER_CYCLE
+    with _state_lock:
+        pending = pending_calibrations.get(key, {}).copy()
+    status = pending.get('status', 'idle')
+    percent = int(round((count / total) * 100)) if status == 'waiting' else 100
+    return jsonify({
+        'reading_count': count,
+        'reading_total': total,
+        'status': status,
+        'percent': percent,
+        'value': pending.get('value'),
+        'error': pending.get('error'),
+    })
+
+def _parse_month(month_str):
+    """Parse a 'YYYY-MM' string into (year, month). Defaults to current month."""
+    now_local = datetime.utcnow() + LOCAL_TIME_OFFSET
+    if month_str:
+        try:
+            dt = datetime.strptime(month_str, "%Y-%m")
+            return dt.year, dt.month
+        except ValueError:
+            pass
+    return now_local.year, now_local.month
+
+
+def _month_bounds_local(year, month):
+    """Return (start_local, end_local, total_minutes) for the given month.
+
+    Both datetimes are naive local time (UTC-3). ``total_minutes`` is the size
+    of the month in minutes.
+    """
+    start_local = datetime(year, month, 1, 0, 0)
+    days_in_month = calendar.monthrange(year, month)[1]
+    end_local = start_local + timedelta(days=days_in_month)
+    total_minutes = int((end_local - start_local).total_seconds() // 60)
+    return start_local, end_local, total_minutes
+
 
 @app.route('/view_h')
 def view_h():
     machines = queries.get_machines()
     positions = queries.get_positions()
     limit_data = limits.load_limits()
-    graph_limits = limits.load_graph_limits()
-    graph_lower = graph_limits['lower']
-    graph_upper = graph_limits['upper']
+    smoothing = limits.load_smoothing()
 
     machine_data = []
 
-    hours = int(request.args.get('hours', 1))
+    # New month-based params (preferred); falls back to legacy datetime+hours.
+    month_str = request.args.get('month')
+    start_min_raw = request.args.get('start_min')
+    end_min_raw = request.args.get('end_min')
 
-    datetime_str = request.args.get('datetime')
-    if datetime_str:
-        # O horário informado é considerado local (UTC-3). Converta para UTC para consultar o banco.
-        start_time = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M") - LOCAL_TIME_OFFSET
+    year, month = _parse_month(month_str)
+    month_start_local, month_end_local, total_minutes = _month_bounds_local(year, month)
+
+    # Previous / next month links
+    prev_year, prev_month = (year - 1, 12) if month == 1 else (year, month - 1)
+    next_year, next_month = (year + 1, 1) if month == 12 else (year, month + 1)
+
+    if start_min_raw is not None and end_min_raw is not None:
+        try:
+            start_min = max(0, min(total_minutes, int(start_min_raw)))
+            end_min = max(0, min(total_minutes, int(end_min_raw)))
+        except ValueError:
+            start_min, end_min = 0, total_minutes
+        if end_min < start_min:
+            start_min, end_min = end_min, start_min
+        start_local = month_start_local + timedelta(minutes=start_min)
+        end_local = month_start_local + timedelta(minutes=end_min)
     else:
-        # If no date was provided, default to the last ``hours`` hours
-        start_time = datetime.utcnow() - timedelta(hours=hours)
+        # Legacy compatibility: accept datetime + hours if provided
+        datetime_str = request.args.get('datetime')
+        hours = int(request.args.get('hours', 1))
+        if datetime_str:
+            start_local = datetime.strptime(datetime_str, "%Y-%m-%dT%H:%M")
+        else:
+            now_local = datetime.utcnow() + LOCAL_TIME_OFFSET
+            start_local = now_local - timedelta(hours=hours)
+        end_local = start_local + timedelta(hours=hours)
+        # Clamp to month and compute offsets
+        start_local = max(month_start_local, min(month_end_local, start_local))
+        end_local = max(month_start_local, min(month_end_local, end_local))
+        start_min = int((start_local - month_start_local).total_seconds() // 60)
+        end_min = int((end_local - month_start_local).total_seconds() // 60)
 
-    selected_datetime = (start_time + LOCAL_TIME_OFFSET).strftime("%Y-%m-%dT%H:%M")
-
-    end_time = start_time + timedelta(hours=hours)
+    # Convert local window to UTC for DB queries
+    start_time = start_local - LOCAL_TIME_OFFSET
+    end_time = end_local - LOCAL_TIME_OFFSET
 
     for machine in machines:
         machine_id = machine[0]
+        machine_graph = limits.get_machine_graph_limits(machine_id, data=limit_data)
+        mg_lower = machine_graph['lower']
+        mg_upper = machine_graph['upper']
 
         labels_set_dt = set()
-        # Cada timestamp pode ter um valor por posição. Use uma lista do
-        # tamanho de ``positions`` para acomodar todas as posições,
-        # evitando erros quando houver mais de duas posições cadastradas.
         all_thickness_data = defaultdict(lambda: [None] * len(positions))
 
-        for position_index, position in enumerate(positions):  # Iterate over all positions
+        for position_index, position in enumerate(positions):
             position_id = position[0]
-            if start_time and end_time:  # Apenas obter medições se start_time e end_time estiverem definidos
-                measurements = queries.get_measurements_within_range(machine_id, position_id, start_time, end_time)
-                calibrations = queries.get_calibrations(machine_id, position_id) # Get calibrations ordered by timestamp
+            measurements = queries.get_measurements_within_range(machine_id, position_id, start_time, end_time)
+            calibrations = queries.get_calibrations(machine_id, position_id)
 
-                calibration_index = 0
-                calibration_value = 0
+            calibration_index = 0
+            calibration_value = 0
 
-                for measurement in measurements:
-                    measurement_time = measurement[1]
-                    # Update the calibration value based on the timestamp
-                    while calibration_index < len(calibrations) and calibrations[calibration_index][0] <= measurement_time:
-                        calibration_value = calibrations[calibration_index][1]
-                        calibration_index += 1
+            for measurement in measurements:
+                measurement_time = measurement[1]
+                while calibration_index < len(calibrations) and calibrations[calibration_index][0] <= measurement_time:
+                    calibration_value = calibrations[calibration_index][1]
+                    calibration_index += 1
 
-                    thickness = calibration_value - measurement[4] - measurement[5]
-                    all_thickness_data[measurement_time][position_index] = thickness
-                    labels_set_dt.add(measurement_time)
+                thickness = calibration_value - measurement[4] - measurement[5]
+                all_thickness_data[measurement_time][position_index] = thickness
+                labels_set_dt.add(measurement_time)
 
         labels_dt = sorted(list(labels_set_dt))
-        graph_data = [(position[1], [all_thickness_data[label][position_index] for label in labels_dt]) for position_index, position in enumerate(positions)]
-
-        # Clamp values for display — keeps Y-axis bounded to the configured range
         graph_data = [
-            (name, [limits.clamp(v, graph_lower, graph_upper) for v in vals])
+            (position[1], [all_thickness_data[label][position_index] for label in labels_dt])
+            for position_index, position in enumerate(positions)
+        ]
+
+        # Smooth first (on raw values), then clamp for display
+        graph_data = [
+            (name, _smooth_series(labels_dt, vals, smoothing))
+            for name, vals in graph_data
+        ]
+        graph_data = [
+            (name, [limits.clamp(v, mg_lower, mg_upper) for v in vals])
             for name, vals in graph_data
         ]
 
-        labels = [(label + LOCAL_TIME_OFFSET).strftime('%H:%M:%S') for label in labels_dt]
+        labels = [(label + LOCAL_TIME_OFFSET).strftime('%d/%m %H:%M:%S') for label in labels_dt]
 
         machine_data.append({
             'name': machine[1],
@@ -465,14 +654,23 @@ def view_h():
                 str(machine_id),
                 {'lower': limits.DEFAULT_LOWER, 'upper': limits.DEFAULT_UPPER},
             ),
+            'graph_limits': machine_graph,
         })
+
+    month_label = month_start_local.strftime('%B %Y')
 
     return render_template(
         'index_view_h.html',
         machines=machine_data,
-        selected_datetime=selected_datetime,
-        selected_hours=hours,
-        graph_limits=graph_limits,
+        month_year=f"{year:04d}-{month:02d}",
+        month_label=month_label,
+        prev_month=f"{prev_year:04d}-{prev_month:02d}",
+        next_month=f"{next_year:04d}-{next_month:02d}",
+        total_minutes=total_minutes,
+        start_min=start_min,
+        end_min=end_min,
+        month_start_iso=month_start_local.strftime('%Y-%m-%dT%H:%M'),
+        smoothing=smoothing,
     )
 
 
@@ -481,32 +679,29 @@ def view():
     machines = queries.get_machines()
     positions = queries.get_positions()
     limit_data = limits.load_limits()
-    graph_limits = limits.load_graph_limits()
-    graph_lower = graph_limits['lower']
-    graph_upper = graph_limits['upper']
+    smoothing = limits.load_smoothing()
 
     machine_data = []
 
     for machine in machines:
         machine_id = machine[0]
+        machine_graph = limits.get_machine_graph_limits(machine_id, data=limit_data)
+        mg_lower = machine_graph['lower']
+        mg_upper = machine_graph['upper']
 
         labels_set_dt = set()
-        # ``positions`` pode possuir mais de duas entradas. Inicialize cada
-        # timestamp com uma lista do tamanho correto para armazenar a espessura
-        # de todas as posições.
         all_thickness_data = defaultdict(lambda: [None] * len(positions))
 
-        for position_index, position in enumerate(positions):  # Iterate over all positions
+        for position_index, position in enumerate(positions):
             position_id = position[0]
             measurements = queries.get_last_60_minutes_measurements(machine_id, position_id)
-            calibrations = queries.get_calibrations(machine_id, position_id) # Get calibrations ordered by timestamp
+            calibrations = queries.get_calibrations(machine_id, position_id)
 
             calibration_index = 0
             calibration_value = 0
 
             for measurement in measurements:
                 measurement_time = measurement[1]
-                # Update the calibration value based on the timestamp
                 while calibration_index < len(calibrations) and calibrations[calibration_index][0] <= measurement_time:
                     calibration_value = calibrations[calibration_index][1]
                     calibration_index += 1
@@ -516,7 +711,10 @@ def view():
                 labels_set_dt.add(measurement_time)
         
         labels_dt = sorted(list(labels_set_dt))
-        graph_data = [(position[1], [all_thickness_data[label][position_index] for label in labels_dt]) for position_index, position in enumerate(positions)]
+        graph_data = [
+            (position[1], [all_thickness_data[label][position_index] for label in labels_dt])
+            for position_index, position in enumerate(positions)
+        ]
         machine_limits = limit_data.get(
             str(machine_id),
             {'lower': limits.DEFAULT_LOWER, 'upper': limits.DEFAULT_UPPER},
@@ -525,21 +723,23 @@ def view():
         time_threshold = datetime.utcnow() - timedelta(seconds=60)
 
         out_of_limits = False
-        
-        # Check out-of-limits against raw (unclamped) values
+        # Check out-of-limits against raw (unsmoothed, unclamped) values
         for position_name, thickness_values in graph_data:
             for thickness, timestamp in zip(thickness_values, labels_dt):
                 if timestamp > time_threshold and thickness is not None:
                     if thickness < machine_limits['lower'] or thickness > machine_limits['upper']:
                         out_of_limits = True
                         break
-
             if out_of_limits:
                 break 
 
-        # Clamp values for display — keeps Y-axis bounded to the configured range
+        # Smooth first, then clamp for display
         graph_data = [
-            (name, [limits.clamp(v, graph_lower, graph_upper) for v in vals])
+            (name, _smooth_series(labels_dt, vals, smoothing))
+            for name, vals in graph_data
+        ]
+        graph_data = [
+            (name, [limits.clamp(v, mg_lower, mg_upper) for v in vals])
             for name, vals in graph_data
         ]
 
@@ -549,14 +749,12 @@ def view():
             'name': machine[1],
             'graph_data': graph_data,
             'labels': labels,
-            'limits': limit_data.get(
-                str(machine_id),
-                {'lower': limits.DEFAULT_LOWER, 'upper': limits.DEFAULT_UPPER},
-            ),
+            'limits': machine_limits,
+            'graph_limits': machine_graph,
             'out_of_limits': out_of_limits,
         })
 
-    return render_template('index_view.html', machines=machine_data, graph_limits=graph_limits)
+    return render_template('index_view.html', machines=machine_data, smoothing=smoothing)
 
 
 @app.route('/mobile')
@@ -564,9 +762,7 @@ def mobile_view():
     machines = queries.get_machines()
     positions = queries.get_positions()
     limit_data = limits.load_limits()
-    graph_limits = limits.load_graph_limits()
-    graph_lower = graph_limits['lower']
-    graph_upper = graph_limits['upper']
+    smoothing = limits.load_smoothing()
 
     machine_data = []
     now = datetime.utcnow()
@@ -577,6 +773,9 @@ def mobile_view():
             str(machine_id),
             {'lower': limits.DEFAULT_LOWER, 'upper': limits.DEFAULT_UPPER},
         )
+        machine_graph = limits.get_machine_graph_limits(machine_id, data=limit_data)
+        mg_lower = machine_graph['lower']
+        mg_upper = machine_graph['upper']
 
         thickness_per_timestamp = defaultdict(list)
         last_15 = []
@@ -632,15 +831,13 @@ def mobile_view():
 
         times_15 = sorted([t for t in thickness_per_timestamp if now - t <= timedelta(minutes=15)])
         labels = [(t + LOCAL_TIME_OFFSET).strftime('%H:%M') for t in times_15]
-        # Average per timestamp, then clamp for display
-        values = [
-            limits.clamp(
-                sum(thickness_per_timestamp[t]) / len(thickness_per_timestamp[t]),
-                graph_lower,
-                graph_upper,
-            )
+        # Raw averaged series, then smoothing (if enabled), then clamp for display
+        raw_values = [
+            sum(thickness_per_timestamp[t]) / len(thickness_per_timestamp[t])
             for t in times_15
         ]
+        smoothed_values = _smooth_series(times_15, raw_values, smoothing)
+        values = [limits.clamp(v, mg_lower, mg_upper) for v in smoothed_values]
 
         logging.info(
             "Mobile view data for machine %s: labels=%s, values=%s",
@@ -678,6 +875,7 @@ def mobile_view():
             'labels': labels,
             'values': values,
             'limits': machine_limits,
+            'graph_limits': machine_graph,
             'avg15': avg15,
             'avg30': avg30,
             'avg60': avg60,
@@ -692,7 +890,7 @@ def mobile_view():
             'out_of_limits': out_limits,
         })
 
-    return render_template('mobile.html', machines=machine_data, graph_limits=graph_limits)
+    return render_template('mobile.html', machines=machine_data, smoothing=smoothing)
 
 
 
@@ -707,13 +905,15 @@ def limits_():
     for machine in machines:
         machine_id_str = str(machine[0])
         machine_name = machine[1]
-        lower_limit = limit_data.get(
-            machine_id_str, {}
-        ).get('lower', limits.DEFAULT_LOWER)
-        upper_limit = limit_data.get(
-            machine_id_str, {}
-        ).get('upper', limits.DEFAULT_UPPER)
-        machine_limits.append((machine_name, lower_limit, upper_limit, machine[0]))
+        entry = limit_data.get(machine_id_str, {}) if isinstance(limit_data.get(machine_id_str), dict) else {}
+        machine_limits.append({
+            'name': machine_name,
+            'id': machine[0],
+            'lower': entry.get('lower', limits.DEFAULT_LOWER),
+            'upper': entry.get('upper', limits.DEFAULT_UPPER),
+            'graph_lower': entry.get('graph_lower'),
+            'graph_upper': entry.get('graph_upper'),
+        })
 
     return render_template('limits.html', machine_limits=machine_limits, graph_limits=graph_limits)
 
@@ -777,13 +977,41 @@ def set_limits(machine_id):
     if upper is None:
         upper = limits.DEFAULT_UPPER
 
+    # Per-machine graph scale; empty fields inherit from the global scale
+    graph_lower_raw = request.form.get('graph_lower', '').strip()
+    graph_upper_raw = request.form.get('graph_upper', '').strip()
+
+    entry = {'lower': lower, 'upper': upper}
+    if graph_lower_raw != '':
+        try:
+            entry['graph_lower'] = float(graph_lower_raw)
+        except ValueError:
+            pass
+    if graph_upper_raw != '':
+        try:
+            entry['graph_upper'] = float(graph_upper_raw)
+        except ValueError:
+            pass
+
     limit_data = limits.load_limits()
-    limit_data[str(machine_id)] = {
-        'lower': lower,
-        'upper': upper,
-    }
+    limit_data[str(machine_id)] = entry
     limits.save_limits(limit_data)
     return redirect(url_for('limits_'))
+
+
+@app.route('/set_smoothing', methods=['POST'])
+def set_smoothing():
+    enabled = request.form.get('enabled') in ('on', 'true', '1', 'yes')
+    try:
+        seconds = int(request.form.get('seconds', limits.SMOOTHING_DEFAULT_SECONDS))
+    except (TypeError, ValueError):
+        seconds = limits.SMOOTHING_DEFAULT_SECONDS
+    limits.save_smoothing(enabled, seconds)
+    # Redirect back to where the user came from (the graph page)
+    referer = request.headers.get('Referer')
+    if referer:
+        return redirect(referer)
+    return redirect(url_for('homepage'))
 
 @app.route('/')
 def homepage():
