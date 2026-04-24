@@ -1,26 +1,15 @@
-function createChart(elementId, labels, upperLimit, lowerLimit, graphData) {
+function createChart(elementId, labels, upperLimit, lowerLimit, graphData, graphMin, graphMax) {
     var ctx = document.getElementById(elementId).getContext('2d');
     var colors = ['#059bff', '#ff4069', '#ff9020', '#22cfcf'];
     
     var datasets = [];
-    var dataMin = Infinity;
-    var dataMax = -Infinity;
     for (var i = 0; i < graphData.length; i++) {
         var position_data = graphData[i];
         var color = colors[i % colors.length]; // Seleciona a cor com base no índice
-        var values = position_data[1];
-        // Atualiza limites encontrados nos dados
-        for (var j = 0; j < values.length; j++) {
-            var v = values[j];
-            if (v !== null && !isNaN(v)) {
-                dataMin = Math.min(dataMin, v);
-                dataMax = Math.max(dataMax, v);
-            }
-        }
         datasets.push({
             label: position_data[0],
-            borderColor: color, // Use a cor selecionada
-            data: values,
+            borderColor: color,
+            data: position_data[1],
             spanGaps: true,
             fill: false,
             cubicInterpolationMode: 'monotone',
@@ -47,14 +36,6 @@ function createChart(elementId, labels, upperLimit, lowerLimit, graphData) {
         pointRadius: 0
     });
 
-    // Determina os limites do eixo Y usando os dados quando disponíveis
-    if (dataMin === Infinity) {
-        dataMin = lowerLimit;
-    }
-    if (dataMax === -Infinity) {
-        dataMax = upperLimit;
-    }
-
     var chart = new Chart(ctx, {
         type: 'line',
         data: {
@@ -65,8 +46,10 @@ function createChart(elementId, labels, upperLimit, lowerLimit, graphData) {
             animation: false,
             scales: {
                 y: {
-                    min: Math.max(0, Math.min(lowerLimit - 0.5, dataMin - 0.1)),
-                    max: Math.max(upperLimit + 0.5, dataMax + 0.1)
+                    // Y-axis is fixed to the global graph scale.
+                    // Values outside [graphMin, graphMax] are already clamped server-side.
+                    min: graphMin,
+                    max: graphMax
                 },
                 x: {
                     ticks: {
@@ -81,29 +64,12 @@ function createChart(elementId, labels, upperLimit, lowerLimit, graphData) {
     });
 }
 
-function createMiniChart(elementId, labels, upperLimit, lowerLimit, values) {
+function createMiniChart(elementId, labels, upperLimit, lowerLimit, values, graphMin, graphMax) {
     var canvas = document.getElementById(elementId);
     if (window.innerWidth <= 768) {
         canvas.height = 300;
     }
     var ctx = canvas.getContext('2d');
-
-    var dataMin = Infinity;
-    var dataMax = -Infinity;
-    for (var i = 0; i < values.length; i++) {
-        var v = values[i];
-        if (v !== null && !isNaN(v)) {
-            dataMin = Math.min(dataMin, v);
-            dataMax = Math.max(dataMax, v);
-        }
-    }
-
-    if (dataMin === Infinity) {
-        dataMin = lowerLimit;
-    }
-    if (dataMax === -Infinity) {
-        dataMax = upperLimit;
-    }
 
     var chart = new Chart(ctx, {
         type: 'line',
@@ -142,8 +108,10 @@ function createMiniChart(elementId, labels, upperLimit, lowerLimit, values) {
             animation: false,
             scales: {
                 y: {
-                    min: Math.max(0, Math.min(lowerLimit - 0.5, dataMin - 0.1)),
-                    max: Math.max(upperLimit + 0.5, dataMax + 0.1)
+                    // Y-axis is fixed to the global graph scale.
+                    // Values outside [graphMin, graphMax] are already clamped server-side.
+                    min: graphMin,
+                    max: graphMax
                 },
                 x: {
                     ticks: {
