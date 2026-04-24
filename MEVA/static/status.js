@@ -7,7 +7,7 @@ function applySensorStatus(payload) {
     (payload.sensors || []).forEach(function (s) {
         var el = document.getElementById('sensor-' + s.id);
         if (!el) return;
-        el.className = s.status;
+        el.className = 'badge badge-' + s.status;
         el.textContent = s.status === 'connected' ? 'Conectado' : 'Desconectado';
     });
 

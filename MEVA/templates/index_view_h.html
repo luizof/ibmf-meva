@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -9,29 +9,33 @@
     <script src="{{ url_for('static', filename='chart.min.js') }}"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </head>
-<form action="/view_h" method="get" id="history-form">
-    <label for="datetime">Selecione a data e hora:</label>
-    <input type="datetime-local" id="datetime" name="datetime" value="{{ selected_datetime }}">
-    <input type="hidden" id="hours" name="hours" value="{{ selected_hours }}">
-    <input type="submit" value="Ver histórico">
-    <div class="button-group">
-        <button type="button" onclick="moveHistory(-60)">-60 min</button>
-        <button type="button" onclick="moveHistory(-30)">-30 min</button>
-        <button type="button" onclick="moveHistory(30)">+30 min</button>
-        <button type="button" onclick="moveHistory(60)">+60 min</button>
-    </div>
-    <div class="button-group">
-        <button type="button" onclick="setRange(12)">12h</button>
-        <button type="button" onclick="setRange(24)">24h</button>
-        <button type="button" onclick="setRange(48)">48h</button>
-    </div>
-</form>
 <body>
     <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
-    <script>
-        var graphMin = {{ graph_limits.lower }};
-        var graphMax = {{ graph_limits.upper }};
-    </script>
+    {% include '_smoothing_toggle.html' %}
+
+    <form action="/view_h" method="get" id="history-form" class="history-controls">
+        <div class="month-nav">
+            <a class="month-btn" href="{{ url_for('view_h', month=prev_month) }}">&larr;</a>
+            <h2 class="month-label">{{ month_label }}</h2>
+            <a class="month-btn" href="{{ url_for('view_h', month=next_month) }}">&rarr;</a>
+        </div>
+        <input type="hidden" name="month" value="{{ month_year }}">
+        <div class="range-slider">
+            <div class="range-track">
+                <div class="range-fill" id="range-fill"></div>
+            </div>
+            <input type="range" min="0" max="{{ total_minutes }}" step="1"
+                   name="start_min" id="start-min" value="{{ start_min }}">
+            <input type="range" min="0" max="{{ total_minutes }}" step="1"
+                   name="end_min" id="end-min" value="{{ end_min }}">
+        </div>
+        <div class="range-display">
+            <span>De <strong id="range-start-label">--</strong></span>
+            <span>Até <strong id="range-end-label">--</strong></span>
+            <input type="submit" value="Aplicar">
+        </div>
+    </form>
+
     {% for machine in machines %}
     <h1>{{ machine.name }}</h1>
     <canvas id="chart-{{ loop.index }}" width="400" height="150"></canvas>
@@ -42,10 +46,48 @@
             {{ machine.limits.upper }},
             {{ machine.limits.lower }},
             {{ machine.graph_data|tojson }},
-            graphMin,
-            graphMax
+            {{ machine.graph_limits.lower }},
+            {{ machine.graph_limits.upper }}
         );
     </script>
     {% endfor %}
+
+    <script>
+        (function () {
+            var monthStart = new Date('{{ month_start_iso }}:00');
+            var totalMinutes = {{ total_minutes }};
+            var startInput = document.getElementById('start-min');
+            var endInput = document.getElementById('end-min');
+            var fill = document.getElementById('range-fill');
+            var startLabel = document.getElementById('range-start-label');
+            var endLabel = document.getElementById('range-end-label');
+
+            function formatAt(minutes) {
+                var d = new Date(monthStart.getTime() + minutes * 60000);
+                var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+                return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' +
+                       pad(d.getHours()) + ':' + pad(d.getMinutes());
+            }
+
+            function update() {
+                var s = parseInt(startInput.value, 10);
+                var e = parseInt(endInput.value, 10);
+                if (s > e) {
+                    var tmp = s; s = e; e = tmp;
+                    startInput.value = s; endInput.value = e;
+                }
+                startLabel.textContent = formatAt(s);
+                endLabel.textContent = formatAt(e);
+                var leftPct = (s / totalMinutes) * 100;
+                var widthPct = ((e - s) / totalMinutes) * 100;
+                fill.style.left = leftPct + '%';
+                fill.style.width = widthPct + '%';
+            }
+
+            startInput.addEventListener('input', update);
+            endInput.addEventListener('input', update);
+            update();
+        })();
+    </script>
 </body>
 </html>

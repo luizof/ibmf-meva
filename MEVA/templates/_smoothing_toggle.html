@@ -1,0 +1,17 @@
+<div class="smoothing-toggle">
+    <form method="post" action="{{ url_for('set_smoothing') }}" id="smoothing-form">
+        <label class="smoothing-label">
+            <input type="checkbox" name="enabled" id="smoothing-enabled" value="on"
+                   {% if smoothing.enabled %}checked{% endif %}
+                   onchange="document.getElementById('smoothing-seconds-wrapper').style.display = this.checked ? 'inline-flex' : 'none';">
+            Amortecimento
+        </label>
+        <span id="smoothing-seconds-wrapper" class="smoothing-seconds"
+              style="display: {% if smoothing.enabled %}inline-flex{% else %}none{% endif %};">
+            <label for="smoothing-seconds">Janela (s):</label>
+            <input type="number" min="1" step="1" name="seconds" id="smoothing-seconds"
+                   value="{{ smoothing.seconds }}">
+            <input type="submit" value="Aplicar">
+        </span>
+    </form>
+</div>
