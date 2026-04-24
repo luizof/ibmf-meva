@@ -28,6 +28,10 @@
 </form>
 <body>
     <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
+    <script>
+        var graphMin = {{ graph_limits.lower }};
+        var graphMax = {{ graph_limits.upper }};
+    </script>
     {% for machine in machines %}
     <h1>{{ machine.name }}</h1>
     <canvas id="chart-{{ loop.index }}" width="400" height="150"></canvas>
@@ -37,7 +41,9 @@
             {{ machine.labels|tojson }},
             {{ machine.limits.upper }},
             {{ machine.limits.lower }},
-            {{ machine.graph_data|tojson }}
+            {{ machine.graph_data|tojson }},
+            graphMin,
+            graphMax
         );
     </script>
     {% endfor %}

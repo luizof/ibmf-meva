@@ -397,6 +397,9 @@ def view_h():
     machines = queries.get_machines()
     positions = queries.get_positions()
     limit_data = limits.load_limits()
+    graph_limits = limits.load_graph_limits()
+    graph_lower = graph_limits['lower']
+    graph_upper = graph_limits['upper']
 
     machine_data = []
 
@@ -445,6 +448,13 @@ def view_h():
 
         labels_dt = sorted(list(labels_set_dt))
         graph_data = [(position[1], [all_thickness_data[label][position_index] for label in labels_dt]) for position_index, position in enumerate(positions)]
+
+        # Clamp values for display — keeps Y-axis bounded to the configured range
+        graph_data = [
+            (name, [limits.clamp(v, graph_lower, graph_upper) for v in vals])
+            for name, vals in graph_data
+        ]
+
         labels = [(label + LOCAL_TIME_OFFSET).strftime('%H:%M:%S') for label in labels_dt]
 
         machine_data.append({
@@ -462,6 +472,7 @@ def view_h():
         machines=machine_data,
         selected_datetime=selected_datetime,
         selected_hours=hours,
+        graph_limits=graph_limits,
     )
 
 
@@ -470,6 +481,9 @@ def view():
     machines = queries.get_machines()
     positions = queries.get_positions()
     limit_data = limits.load_limits()
+    graph_limits = limits.load_graph_limits()
+    graph_lower = graph_limits['lower']
+    graph_upper = graph_limits['upper']
 
     machine_data = []
 
@@ -512,6 +526,7 @@ def view():
 
         out_of_limits = False
         
+        # Check out-of-limits against raw (unclamped) values
         for position_name, thickness_values in graph_data:
             for thickness, timestamp in zip(thickness_values, labels_dt):
                 if timestamp > time_threshold and thickness is not None:
@@ -521,6 +536,12 @@ def view():
 
             if out_of_limits:
                 break 
+
+        # Clamp values for display — keeps Y-axis bounded to the configured range
+        graph_data = [
+            (name, [limits.clamp(v, graph_lower, graph_upper) for v in vals])
+            for name, vals in graph_data
+        ]
 
         labels = [(label + LOCAL_TIME_OFFSET).strftime('%H:%M:%S') for label in labels_dt]
 
@@ -535,7 +556,7 @@ def view():
             'out_of_limits': out_of_limits,
         })
 
-    return render_template('index_view.html', machines=machine_data)
+    return render_template('index_view.html', machines=machine_data, graph_limits=graph_limits)
 
 
 @app.route('/mobile')
@@ -543,6 +564,9 @@ def mobile_view():
     machines = queries.get_machines()
     positions = queries.get_positions()
     limit_data = limits.load_limits()
+    graph_limits = limits.load_graph_limits()
+    graph_lower = graph_limits['lower']
+    graph_upper = graph_limits['upper']
 
     machine_data = []
     now = datetime.utcnow()
@@ -608,7 +632,15 @@ def mobile_view():
 
         times_15 = sorted([t for t in thickness_per_timestamp if now - t <= timedelta(minutes=15)])
         labels = [(t + LOCAL_TIME_OFFSET).strftime('%H:%M') for t in times_15]
-        values = [sum(thickness_per_timestamp[t]) / len(thickness_per_timestamp[t]) for t in times_15]
+        # Average per timestamp, then clamp for display
+        values = [
+            limits.clamp(
+                sum(thickness_per_timestamp[t]) / len(thickness_per_timestamp[t]),
+                graph_lower,
+                graph_upper,
+            )
+            for t in times_15
+        ]
 
         logging.info(
             "Mobile view data for machine %s: labels=%s, values=%s",
@@ -660,7 +692,7 @@ def mobile_view():
             'out_of_limits': out_limits,
         })
 
-    return render_template('mobile.html', machines=machine_data)
+    return render_template('mobile.html', machines=machine_data, graph_limits=graph_limits)
 
 
 
@@ -669,6 +701,7 @@ def mobile_view():
 def limits_():
     machines = queries.get_machines()
     limit_data = limits.load_limits()
+    graph_limits = limits.load_graph_limits()
 
     machine_limits = []
     for machine in machines:
@@ -682,7 +715,19 @@ def limits_():
         ).get('upper', limits.DEFAULT_UPPER)
         machine_limits.append((machine_name, lower_limit, upper_limit, machine[0]))
 
-    return render_template('limits.html', machine_limits=machine_limits)
+    return render_template('limits.html', machine_limits=machine_limits, graph_limits=graph_limits)
+
+
+@app.route('/set_graph_limits', methods=['POST'])
+def set_graph_limits():
+    lower = request.form.get('graph_lower', type=float)
+    upper = request.form.get('graph_upper', type=float)
+    if lower is None:
+        lower = limits.GRAPH_DEFAULT_LOWER
+    if upper is None:
+        upper = limits.GRAPH_DEFAULT_UPPER
+    limits.save_graph_limits(lower, upper)
+    return redirect(url_for('limits_'))
 
 
 @app.route('/debug')

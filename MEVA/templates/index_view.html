@@ -12,6 +12,10 @@
 </head>
 <body>
     <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
+    <script>
+        var graphMin = {{ graph_limits.lower }};
+        var graphMax = {{ graph_limits.upper }};
+    </script>
     {% for machine in machines %}
     <div id="machine-name-{{ loop.index }}" class="machine-name {% if machine.out_of_limits %}out-of-limits{% endif %}">
         <h1>{{ machine.name }}</h1>
@@ -23,7 +27,9 @@
             {{ machine.labels|tojson }},
             {{ machine.limits.upper }},
             {{ machine.limits.lower }},
-            {{ machine.graph_data|tojson }}
+            {{ machine.graph_data|tojson }},
+            graphMin,
+            graphMax
         );
     </script>
     {% endfor %}

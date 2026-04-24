@@ -10,6 +10,17 @@
 <body>
     <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
     <div class="machine-grid">
+        <div class="machine-block">
+            <h3>Escala dos Gráficos</h3>
+            <p style="font-size: 0.85em; color: #555;">Define o intervalo do eixo Y em todos os gráficos de linha. Valores fora deste intervalo são exibidos no limite correspondente.</p>
+            <form method="post" action="{{ url_for('set_graph_limits') }}">
+                <label for="graph_lower">Mínimo (mm):</label>
+                <input type="number" step="0.01" name="graph_lower" id="graph_lower" value="{{ '%.2f'|format(graph_limits.lower) }}">
+                <label for="graph_upper">Máximo (mm):</label>
+                <input type="number" step="0.01" name="graph_upper" id="graph_upper" value="{{ '%.2f'|format(graph_limits.upper) }}">
+                <input type="submit" value="Salvar" class="limit-button">
+            </form>
+        </div>
         {% for machine_name, lower_limit, upper_limit, machine_id in machine_limits %}
         <div class="machine-block">
             <h3>{{ machine_name }}</h3>

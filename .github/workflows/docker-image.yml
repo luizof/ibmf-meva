@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    types: [opened, synchronize, reopened]
 
 jobs:
   build:
@@ -14,8 +16,17 @@ jobs:
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+      - name: Set image tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            echo "tag=pr-${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
+
       - name: Build and Push
         run: |
-          IMAGE=ghcr.io/${{ github.repository_owner }}/ibmf-meva:latest
+          IMAGE=ghcr.io/${{ github.repository_owner }}/ibmf-meva:${{ steps.tag.outputs.tag }}
           docker build -t $IMAGE .
           docker push $IMAGE
