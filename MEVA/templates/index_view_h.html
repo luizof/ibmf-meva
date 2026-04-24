@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -9,29 +9,42 @@
     <script src="{{ url_for('static', filename='chart.min.js') }}"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </head>
-<form action="/view_h" method="get" id="history-form">
-    <label for="datetime">Selecione a data e hora:</label>
-    <input type="datetime-local" id="datetime" name="datetime" value="{{ selected_datetime }}">
-    <input type="hidden" id="hours" name="hours" value="{{ selected_hours }}">
-    <input type="submit" value="Ver histórico">
-    <div class="button-group">
-        <button type="button" onclick="moveHistory(-60)">-60 min</button>
-        <button type="button" onclick="moveHistory(-30)">-30 min</button>
-        <button type="button" onclick="moveHistory(30)">+30 min</button>
-        <button type="button" onclick="moveHistory(60)">+60 min</button>
-    </div>
-    <div class="button-group">
-        <button type="button" onclick="setRange(12)">12h</button>
-        <button type="button" onclick="setRange(24)">24h</button>
-        <button type="button" onclick="setRange(48)">48h</button>
-    </div>
-</form>
 <body>
     <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
-    <script>
-        var graphMin = {{ graph_limits.lower }};
-        var graphMax = {{ graph_limits.upper }};
-    </script>
+    {% include '_smoothing_toggle.html' %}
+
+    <form action="/view_h" method="get" id="history-form" class="history-controls">
+        <div class="month-nav">
+            <a class="month-btn" href="{{ url_for('view_h', month=prev_month) }}">&larr;</a>
+            <h2 class="month-label">{{ month_label }}</h2>
+            <a class="month-btn" href="{{ url_for('view_h', month=next_month) }}">&rarr;</a>
+        </div>
+        <div class="week-selector" title="Limita o alcance máximo da barra de seleção">
+            {% for n in range(1, num_weeks + 1) %}
+            <button type="button"
+                    class="week-btn{% if n <= selected_weeks %} active{% endif %}"
+                    data-week="{{ n }}"
+                    onclick="selectWeek({{ n }})">S{{ n }}</button>
+            {% endfor %}
+        </div>
+        <input type="hidden" name="month" value="{{ month_year }}">
+        <input type="hidden" name="weeks" id="weeks-input" value="{{ selected_weeks }}">
+        <div class="range-slider">
+            <div class="range-track">
+                <div class="range-fill" id="range-fill"></div>
+            </div>
+            <input type="range" min="0" max="{{ week_max_minutes }}" step="1"
+                   name="start_min" id="start-min" value="{{ start_min }}">
+            <input type="range" min="0" max="{{ week_max_minutes }}" step="1"
+                   name="end_min" id="end-min" value="{{ end_min }}">
+        </div>
+        <div class="range-display">
+            <span>De <strong id="range-start-label">--</strong></span>
+            <span>Até <strong id="range-end-label">--</strong></span>
+            <input type="submit" value="Aplicar">
+        </div>
+    </form>
+
     {% for machine in machines %}
     <h1>{{ machine.name }}</h1>
     <canvas id="chart-{{ loop.index }}" width="400" height="150"></canvas>
@@ -42,10 +55,89 @@
             {{ machine.limits.upper }},
             {{ machine.limits.lower }},
             {{ machine.graph_data|tojson }},
-            graphMin,
-            graphMax
+            {{ machine.graph_limits.lower }},
+            {{ machine.graph_limits.upper }}
         );
     </script>
     {% endfor %}
+
+    <script>
+        var MEVA_totalMinutes = {{ total_minutes }};
+        var MEVA_weekMinutes = {{ week_minutes }};
+        var MEVA_numWeeks = {{ num_weeks }};
+        // Current max of the slider (in minutes since start of month), driven
+        // by the week selector. Updated live by selectWeek().
+        var MEVA_weekMaxMinutes = {{ week_max_minutes }};
+
+        function updateWeekButtons(n) {
+            document.querySelectorAll('.week-btn').forEach(function (btn) {
+                var k = parseInt(btn.getAttribute('data-week'), 10);
+                if (k <= n) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        function selectWeek(n) {
+            MEVA_weekMaxMinutes = Math.min(n * MEVA_weekMinutes, MEVA_totalMinutes);
+            document.getElementById('weeks-input').value = n;
+            var startInput = document.getElementById('start-min');
+            var endInput = document.getElementById('end-min');
+            startInput.max = MEVA_weekMaxMinutes;
+            endInput.max = MEVA_weekMaxMinutes;
+            // Clamp current values to the new window
+            var s = parseInt(startInput.value, 10);
+            var e = parseInt(endInput.value, 10);
+            if (s > MEVA_weekMaxMinutes) s = MEVA_weekMaxMinutes;
+            if (e > MEVA_weekMaxMinutes) e = MEVA_weekMaxMinutes;
+            if (s > e) s = e;
+            startInput.value = s;
+            endInput.value = e;
+            updateWeekButtons(n);
+            window.__MEVA_updateRange && window.__MEVA_updateRange();
+        }
+
+        (function () {
+            var monthStart = new Date('{{ month_start_iso }}:00');
+            var startInput = document.getElementById('start-min');
+            var endInput = document.getElementById('end-min');
+            var fill = document.getElementById('range-fill');
+            var startLabel = document.getElementById('range-start-label');
+            var endLabel = document.getElementById('range-end-label');
+
+            function formatAt(minutes) {
+                var d = new Date(monthStart.getTime() + minutes * 60000);
+                var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+                return pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + ' ' +
+                       pad(d.getHours()) + ':' + pad(d.getMinutes());
+            }
+
+            function update() {
+                var s = parseInt(startInput.value, 10);
+                var e = parseInt(endInput.value, 10);
+                if (s > e) {
+                    var tmp = s; s = e; e = tmp;
+                    startInput.value = s; endInput.value = e;
+                }
+                startLabel.textContent = formatAt(s);
+                endLabel.textContent = formatAt(e);
+                // Fill position is drawn relative to the week playground, not
+                // the whole month, so the visible track corresponds to what
+                // the slider can actually select.
+                var denom = MEVA_weekMaxMinutes || 1;
+                var leftPct = (s / denom) * 100;
+                var widthPct = ((e - s) / denom) * 100;
+                fill.style.left = leftPct + '%';
+                fill.style.width = widthPct + '%';
+            }
+            window.__MEVA_updateRange = update;
+
+            startInput.addEventListener('input', update);
+            endInput.addEventListener('input', update);
+            update();
+        })();
+    </script>
 </body>
 </html>

@@ -12,10 +12,7 @@
 </head>
 <body>
     <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
-    <script>
-        var graphMin = {{ graph_limits.lower }};
-        var graphMax = {{ graph_limits.upper }};
-    </script>
+    {% include '_smoothing_toggle.html' %}
     {% for machine in machines %}
     <div id="machine-name-{{ loop.index }}" class="machine-name {% if machine.out_of_limits %}out-of-limits{% endif %}">
         <h1>{{ machine.name }}</h1>
@@ -28,8 +25,8 @@
             {{ machine.limits.upper }},
             {{ machine.limits.lower }},
             {{ machine.graph_data|tojson }},
-            graphMin,
-            graphMax
+            {{ machine.graph_limits.lower }},
+            {{ machine.graph_limits.upper }}
         );
     </script>
     {% endfor %}

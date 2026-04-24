@@ -178,4 +178,327 @@ input[type="submit"]:hover {
     }
 }
 
+/* ---------- Card layout (status / calibrations) ---------- */
+.machine-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 16px 0;
+}
+
+.machine-card {
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    padding: 16px;
+}
+
+.machine-card-header h2 {
+    margin: 0;
+    color: #333;
+}
+
+.machine-card-header .machine-desc {
+    margin: 4px 0 0;
+    color: #666;
+    font-size: 0.9em;
+}
+
+.position-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+}
+
+.position-card {
+    background: #fafafa;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+    padding: 10px 12px;
+}
+
+.position-card h3 {
+    margin: 0 0 4px;
+    font-size: 1em;
+    color: #222;
+}
+
+.position-card .position-desc {
+    margin: 0 0 6px;
+    color: #777;
+    font-size: 0.85em;
+}
+
+.sensor-pair-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.sensor-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 0.9em;
+}
+
+.sensor-label {
+    font-weight: bold;
+    color: #333;
+    min-width: 70px;
+}
+
+.sensor-ip {
+    color: #666;
+    font-family: monospace;
+    font-size: 0.85em;
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.8em;
+    font-weight: bold;
+    color: #fff;
+}
+
+.badge-connected { background-color: #28a745; }
+.badge-disconnected { background-color: #dc3545; }
+.badge-neutral { background-color: #6c757d; }
+
+.calibration-date {
+    margin: 6px 0;
+    font-size: 0.9em;
+    color: #555;
+}
+
+/* ---------- Smoothing toggle ---------- */
+.smoothing-toggle {
+    margin: 10px 0;
+    padding: 8px 12px;
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    display: inline-block;
+}
+
+.smoothing-toggle form {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    margin: 0;
+}
+
+.smoothing-label {
+    width: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.smoothing-label input[type="checkbox"] {
+    width: auto;
+    cursor: pointer;
+}
+
+.smoothing-seconds {
+    align-items: center;
+    gap: 6px;
+}
+
+.smoothing-seconds input[type="number"] {
+    width: 80px;
+}
+
+.smoothing-seconds input[type="submit"] {
+    width: auto;
+    padding: 6px 12px;
+}
+
+/* ---------- History trim slider ---------- */
+.history-controls {
+    background: #fff;
+    padding: 12px 16px;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    margin: 10px 0 20px;
+    gap: 10px;
+}
+
+.month-nav {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+}
+
+.month-nav h2 {
+    margin: 0;
+    min-width: 180px;
+    text-align: center;
+    text-transform: capitalize;
+}
+
+.month-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    background: #007bff;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 1.2em;
+    text-decoration: none;
+    margin: 0;
+}
+
+.week-selector {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin: 8px 0 4px;
+    flex-wrap: wrap;
+}
+
+.week-btn {
+    min-width: 56px;
+    padding: 6px 12px;
+    border: 1px solid #007bff;
+    background: #fff;
+    color: #007bff;
+    border-radius: 6px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.week-btn:hover {
+    background: #e8f1ff;
+}
+
+.week-btn.active {
+    background: #007bff;
+    color: #fff;
+}
+
+.range-slider {
+    position: relative;
+    height: 36px;
+    margin: 8px 0 0;
+}
+
+.range-track {
+    position: absolute;
+    top: 16px;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: #ddd;
+    border-radius: 2px;
+}
+
+.range-fill {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    background: #007bff;
+    border-radius: 2px;
+}
+
+.range-slider input[type="range"] {
+    position: absolute;
+    top: 8px;
+    left: 0;
+    right: 0;
+    width: 100%;
+    appearance: none;
+    background: transparent;
+    pointer-events: none;
+    height: 20px;
+    margin: 0;
+}
+
+.range-slider input[type="range"]::-webkit-slider-thumb {
+    appearance: none;
+    pointer-events: auto;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #007bff;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+}
+
+.range-slider input[type="range"]::-moz-range-thumb {
+    pointer-events: auto;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #007bff;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    cursor: pointer;
+}
+
+.range-display {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+    font-size: 0.9em;
+    color: #444;
+}
+
+.range-display input[type="submit"] {
+    width: auto;
+    padding: 6px 14px;
+    margin-left: auto;
+}
+
+/* ---------- Calibration progress ---------- */
+.calibration-progress-container {
+    max-width: 500px;
+    margin: 40px auto;
+    padding: 24px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    text-align: center;
+}
+
+.calibration-progress-container h1 {
+    margin-top: 0;
+}
+
+.calibration-progress-bar {
+    width: 100%;
+    height: 22px;
+    border-radius: 11px;
+    overflow: hidden;
+    background: #eee;
+    appearance: none;
+}
+
+.calibration-progress-bar::-webkit-progress-bar { background: #eee; border-radius: 11px; }
+.calibration-progress-bar::-webkit-progress-value { background: #28a745; border-radius: 11px; transition: width 0.3s ease; }
+.calibration-progress-bar::-moz-progress-bar { background: #28a745; border-radius: 11px; }
+
+.calibration-progress-text {
+    margin: 10px 0 0;
+    font-size: 0.95em;
+    color: #555;
+}
+
+.calibration-progress-error {
+    margin-top: 12px;
+    color: #dc3545;
+    font-weight: bold;
+}
 

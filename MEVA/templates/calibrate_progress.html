@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>Calibrando...</title>
+</head>
+<body>
+    <a href="{{ url_for('calibrations') }}" class="back-button">Voltar</a>
+    <div class="calibration-progress-container">
+        <h1>Calibrando...</h1>
+        <p class="calibration-progress-text">
+            Aguardando leituras da máquina
+            <strong>{{ machine_id }}</strong>,
+            posição <strong>{{ position_id }}</strong>.
+        </p>
+        <progress id="progress-bar" class="calibration-progress-bar" value="0" max="100"></progress>
+        <p class="calibration-progress-text">
+            <span id="progress-count">0</span>/<span id="progress-total">11</span> leituras
+            (<span id="progress-percent">0</span>%)
+        </p>
+        <p id="progress-error" class="calibration-progress-error" style="display: none;"></p>
+    </div>
+
+    <script>
+        (function () {
+            var url = '{{ url_for("calibration_progress", machine_id=machine_id, position_id=position_id) }}';
+            var bar = document.getElementById('progress-bar');
+            var count = document.getElementById('progress-count');
+            var total = document.getElementById('progress-total');
+            var percent = document.getElementById('progress-percent');
+            var errorEl = document.getElementById('progress-error');
+
+            function poll() {
+                fetch(url, { cache: 'no-store' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        count.textContent = data.reading_count;
+                        total.textContent = data.reading_total;
+                        percent.textContent = data.percent;
+                        bar.value = data.percent;
+
+                        if (data.status === 'done') {
+                            window.location.href = '{{ url_for("calibrations") }}';
+                            return;
+                        }
+                        if (data.status === 'error') {
+                            errorEl.textContent = 'Erro: ' + (data.error || 'falha na calibração');
+                            errorEl.style.display = 'block';
+                            return;
+                        }
+                        setTimeout(poll, 500);
+                    })
+                    .catch(function () { setTimeout(poll, 1000); });
+            }
+            poll();
+        })();
+    </script>
+</body>
+</html>
