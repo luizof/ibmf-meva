@@ -571,16 +571,24 @@ def view_h():
     prev_year, prev_month = (year - 1, 12) if month == 1 else (year, month - 1)
     next_year, next_month = (year + 1, 1) if month == 12 else (year, month + 1)
 
+    # Week pre-selector: restricts the playground of the trim slider.
+    # ``weeks=N`` means the slider can only span [0, N*7days] inside the month.
+    week_minutes = 7 * 24 * 60
+    days_in_month = (month_end_local - month_start_local).days
+    num_weeks = min(5, (days_in_month + 6) // 7)
+    try:
+        selected_weeks = int(request.args.get('weeks', num_weeks))
+    except (TypeError, ValueError):
+        selected_weeks = num_weeks
+    selected_weeks = max(1, min(num_weeks, selected_weeks))
+    week_max_minutes = min(selected_weeks * week_minutes, total_minutes)
+
     if start_min_raw is not None and end_min_raw is not None:
         try:
-            start_min = max(0, min(total_minutes, int(start_min_raw)))
-            end_min = max(0, min(total_minutes, int(end_min_raw)))
+            start_min = int(start_min_raw)
+            end_min = int(end_min_raw)
         except ValueError:
-            start_min, end_min = 0, total_minutes
-        if end_min < start_min:
-            start_min, end_min = end_min, start_min
-        start_local = month_start_local + timedelta(minutes=start_min)
-        end_local = month_start_local + timedelta(minutes=end_min)
+            start_min, end_min = 0, week_max_minutes
     else:
         # Legacy compatibility: accept datetime + hours if provided
         datetime_str = request.args.get('datetime')
@@ -591,11 +599,19 @@ def view_h():
             now_local = datetime.utcnow() + LOCAL_TIME_OFFSET
             start_local = now_local - timedelta(hours=hours)
         end_local = start_local + timedelta(hours=hours)
-        # Clamp to month and compute offsets
         start_local = max(month_start_local, min(month_end_local, start_local))
         end_local = max(month_start_local, min(month_end_local, end_local))
         start_min = int((start_local - month_start_local).total_seconds() // 60)
         end_min = int((end_local - month_start_local).total_seconds() // 60)
+
+    # Final clamp to the week playground [0, week_max_minutes]
+    start_min = max(0, min(week_max_minutes, start_min))
+    end_min = max(0, min(week_max_minutes, end_min))
+    if end_min < start_min:
+        start_min, end_min = end_min, start_min
+
+    start_local = month_start_local + timedelta(minutes=start_min)
+    end_local = month_start_local + timedelta(minutes=end_min)
 
     # Convert local window to UTC for DB queries
     start_time = start_local - LOCAL_TIME_OFFSET
@@ -659,17 +675,6 @@ def view_h():
 
     month_label = month_start_local.strftime('%B %Y')
 
-    # Week selector: 4 or 5 buttons depending on month length.
-    # Each "week" covers 7 days (except the last, which runs to the end of
-    # the month). ``active_week`` drives the highlighted prefix (S1..SN).
-    week_minutes = 7 * 24 * 60
-    days_in_month = (month_end_local - month_start_local).days
-    num_weeks = min(5, (days_in_month + 6) // 7)
-    if start_min == 0 and end_min > 0:
-        active_week = min(num_weeks, (end_min - 1) // week_minutes + 1)
-    else:
-        active_week = 0
-
     return render_template(
         'index_view_h.html',
         machines=machine_data,
@@ -683,7 +688,8 @@ def view_h():
         month_start_iso=month_start_local.strftime('%Y-%m-%dT%H:%M'),
         smoothing=smoothing,
         num_weeks=num_weeks,
-        active_week=active_week,
+        selected_weeks=selected_weeks,
+        week_max_minutes=week_max_minutes,
         week_minutes=week_minutes,
     )
 
