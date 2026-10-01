@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='ihm.css') }}">
+    <script src="{{ url_for('static', filename='chart.min.js') }}"></script>
+    <title>IHM - {{ payload.machine_name }}</title>
+</head>
+<body>
+    <div class="ihm">
+        <header class="ihm-header">
+            <a class="back-button" href="{{ url_for('ihm_index') }}">&#8592; Voltar</a>
+            <div class="title">
+                <span class="brand">MEVA</span>
+                <span class="machine-name" id="machine-name">{{ payload.machine_name }}</span>
+            </div>
+            <div class="header-right">
+                <span class="updated" id="updated-at">Dados {{ payload.updated_at }}</span>
+                <span class="status-pill" id="status-pill">AO VIVO</span>
+                <span class="clock" id="clock">--:--:--</span>
+            </div>
+        </header>
+
+        <section class="kpi-row" id="kpi-row"></section>
+
+        <section class="chart-panel">
+            <div class="panel-title">
+                <span class="t">Histórico de Espessura</span>
+                <span class="panel-sub" id="chart-window">última hora</span>
+            </div>
+            <div class="chart-wrap">
+                <canvas id="ihm-chart"></canvas>
+            </div>
+        </section>
+
+        <footer class="stats-row" id="stats-row"></footer>
+    </div>
+
+    <script>
+        window.__IHM__ = {{ payload|tojson }};
+        window.__IHM_META__ = {
+            machineId: {{ payload.machine_id }},
+            hours: {{ payload.hours }},
+            dataUrl: "{{ url_for('ihm_machine_data', machine_id=payload.machine_id) }}"
+        };
+    </script>
+    <script src="{{ url_for('static', filename='ihm.js') }}"></script>
+</body>
+</html>
