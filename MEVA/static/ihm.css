@@ -1,0 +1,348 @@
+/* ============================================================
+   IHM - Painel industrial 16:9 (apenas exibição / kiosk)
+   Layout otimizado para telas widescreen, sem interação touch.
+   ============================================================ */
+
+:root {
+    --bg: #0b1220;
+    --panel: #131c2e;
+    --panel-2: #1a2438;
+    --border: #26324a;
+    --text: #e8eefc;
+    --muted: #8fa0bd;
+    --accent: #059bff;
+    --ok: #2fd07a;
+    --warn: #ff9020;
+    --bad: #ff4069;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: Arial, Helvetica, sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+}
+
+.ihm {
+    display: grid;
+    grid-template-rows: auto auto 1fr auto;
+    height: 100vh;
+    gap: 12px;
+    padding: 12px 16px;
+}
+
+/* ---------- Cabeçalho ---------- */
+.ihm-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(90deg, var(--panel), var(--panel-2));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 16px;
+}
+
+.ihm-header .title {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.ihm-header .brand {
+    font-size: clamp(16px, 1.4vw, 22px);
+    font-weight: bold;
+    letter-spacing: 2px;
+    color: var(--accent);
+}
+
+.ihm-header .machine-name {
+    font-size: clamp(20px, 2.2vw, 34px);
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.status-pill {
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: clamp(12px, 1vw, 16px);
+    font-weight: bold;
+    letter-spacing: 1px;
+    background: var(--ok);
+    color: #06210f;
+}
+
+.status-pill.warn {
+    background: var(--warn);
+    color: #2a1600;
+}
+
+.status-pill.bad {
+    background: var(--bad);
+    color: #2a000c;
+}
+
+.clock {
+    font-variant-numeric: tabular-nums;
+    font-size: clamp(18px, 1.8vw, 28px);
+    font-weight: bold;
+    color: var(--text);
+}
+
+.updated {
+    font-size: clamp(10px, 0.9vw, 13px);
+    color: var(--muted);
+    white-space: nowrap;
+}
+
+.back-button {
+    display: inline-block;
+    background-color: var(--accent);
+    color: #ffffff;
+    text-decoration: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: clamp(13px, 1.1vw, 17px);
+    font-weight: bold;
+    white-space: nowrap;
+}
+
+.back-button:hover {
+    background-color: #0074cc;
+    text-decoration: none;
+}
+
+/* ---------- Linha de KPIs (espessura atual por ponto) ---------- */
+.kpi-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+}
+
+.kpi-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-left: 6px solid var(--accent);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.kpi-card.out {
+    border-left-color: var(--bad);
+    background: linear-gradient(180deg, #2a1220, var(--panel));
+}
+
+.kpi-card.stale {
+    border-left-color: var(--warn);
+}
+
+.kpi-name {
+    font-size: clamp(13px, 1.1vw, 18px);
+    font-weight: bold;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.kpi-value {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+}
+
+.kpi-value .num {
+    font-size: clamp(34px, 4.2vw, 64px);
+    font-weight: bold;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+}
+
+.kpi-card.out .kpi-value .num {
+    color: var(--bad);
+}
+
+.kpi-card.stale .kpi-value .num {
+    color: var(--warn);
+}
+
+.kpi-value .unit {
+    font-size: clamp(14px, 1.3vw, 22px);
+    color: var(--muted);
+}
+
+.kpi-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    font-size: clamp(11px, 1vw, 15px);
+    color: var(--muted);
+}
+
+.kpi-meta b {
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+}
+
+.kpi-foot {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: clamp(10px, 0.9vw, 13px);
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 6px;
+}
+
+/* ---------- Painel do gráfico ---------- */
+.chart-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.panel-title {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.panel-title .t {
+    font-size: clamp(15px, 1.4vw, 22px);
+    font-weight: bold;
+}
+
+.panel-title .panel-sub {
+    font-size: clamp(11px, 1vw, 15px);
+    color: var(--muted);
+}
+
+.chart-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+}
+
+#ihm-chart {
+    position: absolute;
+    inset: 0;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* ---------- Rodapé de estatísticas ---------- */
+.stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 10px;
+}
+
+.stat-tile {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 8px 12px;
+    text-align: center;
+    min-width: 0;
+}
+
+.stat-label {
+    font-size: clamp(10px, 0.9vw, 13px);
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stat-value {
+    font-size: clamp(18px, 1.8vw, 28px);
+    font-weight: bold;
+    font-variant-numeric: tabular-nums;
+}
+
+.stat-value.bad {
+    color: var(--bad);
+}
+
+.stat-value.ok {
+    color: var(--ok);
+}
+
+/* ---------- Índice de máquinas (/ihm) ---------- */
+.ihm-index {
+    min-height: 100vh;
+    overflow: auto;
+    padding: 24px;
+}
+
+.ihm-index h1 {
+    color: var(--text);
+}
+
+.ihm-index .sub {
+    color: var(--muted);
+    margin-bottom: 20px;
+}
+
+.machine-link-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+    max-width: 1100px;
+}
+
+.machine-link {
+    display: block;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px;
+    text-decoration: none;
+    color: var(--text);
+}
+
+.machine-link:hover {
+    border-color: var(--accent);
+    text-decoration: none;
+}
+
+.machine-link .m-name {
+    font-size: 20px;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.machine-link .m-url {
+    font-size: 12px;
+    color: var(--accent);
+    word-break: break-all;
+}

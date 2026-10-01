@@ -22,6 +22,14 @@ app = Flask(__name__)
 # Horário local (UTC-3) usado para exibir os gráficos
 LOCAL_TIME_OFFSET = timedelta(hours=-3)
 
+# Tempo (em segundos) que um sensor pode ficar sem resposta antes de ser
+# considerado desconectado. Evita alternância rápida em falhas instantâneas.
+SENSOR_DISCONNECT_TIMEOUT = 10
+
+# Último momento (UTC) em que cada sensor respondeu com sucesso.
+# Chave: ID do sensor; valor: datetime. Usado para a histerese de conexão.
+_sensor_last_ok = {}
+
 def measure_sensor_pair(sensor_pair):
     machine_id = sensor_pair[2]
     position_id = sensor_pair[3]
@@ -318,19 +326,75 @@ def remover_sensor(id):
     conn.close()
     return redirect(url_for('sensores'))
 
+def check_sensors():
+    """Lê todos os sensores e atualiza o estado de conexão de cada um.
+
+    Um sensor só é considerado desconectado após ``SENSOR_DISCONNECT_TIMEOUT``
+    segundos sem nenhuma resposta (histerese). Enquanto a última resposta for
+    recente, ele permanece "connected" mesmo que a leitura atual falhe.
+
+    As leituras são feitas em paralelo para manter a página de status ágil.
+    O estado é persistido no banco apenas quando muda, reduzindo escritas.
+    """
+    global _sensor_last_ok
+    now = datetime.utcnow()
+    sensors = queries.get_sensors()
+
+    # Leituras em paralelo para não atrasar a resposta
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        distances = list(executor.map(lambda s: fast_get_distance(s[1], 8899), sensors))
+
+    results = []
+    for sensor, distance in zip(sensors, distances):
+        sensor_id = sensor[0]
+        if distance is not None:
+            _sensor_last_ok[sensor_id] = now
+
+        last_ok = _sensor_last_ok.get(sensor_id)
+        connected = (
+            last_ok is not None
+            and (now - last_ok) < timedelta(seconds=SENSOR_DISCONNECT_TIMEOUT)
+        )
+        status = "connected" if connected else "disconnected"
+
+        # Persiste somente quando o estado muda
+        if status != sensor[5]:
+            queries.update_sensor_status(sensor_id, status)
+
+        results.append({
+            'id': sensor_id,
+            'ip': sensor[1],
+            'machine_id': sensor[2],
+            'position_id': sensor[3],
+            'e_superior': bool(sensor[4]),
+            'status': status,
+        })
+    return results
+
+
 @app.route('/status')
 def status():
-    sensors = queries.get_sensors()
-    for sensor in sensors:
-        sensor_ip = sensor[1]
-        distance = fast_get_distance(sensor_ip,8899)
-        status = "connected" if distance is not None else "disconnected"
-        queries.update_sensor_status(sensor[0], status)
-    
+    check_sensors()
+
     machines = queries.get_machines()
     positions = queries.get_positions()
     sensors = queries.get_sensors()  # Refresh sensor data after updating status
     return render_template('index_status.html', machines=machines, positions=positions, sensors=sensors)
+
+
+@app.route('/status/data')
+def status_data():
+    """Endpoint de atualização contínua da página de status (polling).
+
+    Lê os sensores, aplica a histerese de conexão e devolve o estado atual
+    para o cliente atualizar a página sem precisar recarregá-la.
+    """
+    results = check_sensors()
+    return jsonify({
+        'sensors': results,
+        'updated_at': (datetime.utcnow() + LOCAL_TIME_OFFSET).strftime('%H:%M:%S'),
+        'disconnect_timeout': SENSOR_DISCONNECT_TIMEOUT,
+    })
 
 
 @app.route('/calibrations')
@@ -784,6 +848,208 @@ def set_limits(machine_id):
     }
     limits.save_limits(limit_data)
     return redirect(url_for('limits_'))
+
+# ============================================================
+# IHM - Painel 16:9 por máquina (apenas exibição / kiosk)
+# ============================================================
+
+# Janelas (em minutos) usadas nas estatísticas agregadas do rodapé
+IHM_STATS_WINDOWS = (15, 30, 60, 180)
+
+
+def _avg(values):
+    return sum(values) / len(values) if values else None
+
+
+def _std(values):
+    mean = _avg(values)
+    return (sum((x - mean) ** 2 for x in values) / len(values)) ** 0.5 if values else None
+
+
+def _calibration_value_at(calibrations, measurement_time):
+    """Retorna o valor de calibração válido em ``measurement_time`` (0 se não houver)."""
+    value = 0
+    for cal in calibrations:
+        if cal[0] <= measurement_time:
+            value = cal[1]
+        else:
+            break
+    return value
+
+
+def _thickness(sup, inf, calibration_value):
+    return float(calibration_value) - float(sup) - float(inf)
+
+
+def build_ihm_payload(machine_id, hours):
+    """Monta o payload (JSON) exibido no painel IHM de uma única máquina.
+
+    Retorna ``None`` quando a máquina não existe. O mesmo payload é usado na
+    renderização inicial e no endpoint de atualização automática (polling).
+    """
+    hours = max(1, int(hours))
+    now = datetime.utcnow()
+    start_time = now - timedelta(hours=hours)
+    end_time = now
+
+    machine = next((m for m in queries.get_machines() if m[0] == machine_id), None)
+    if machine is None:
+        return None
+
+    positions = queries.get_positions()
+    limit_data = limits.load_limits()
+    graph_limits = limits.load_graph_limits()
+    machine_limits = limit_data.get(
+        str(machine_id),
+        {'lower': limits.DEFAULT_LOWER, 'upper': limits.DEFAULT_UPPER},
+    )
+    last_calibrations = queries.get_last_calibration()
+
+    per_position = []
+    position_series = []   # lista paralela a ``positions``: [(ts_segundo, espessura), ...]
+    labels_set = set()
+    window_values = {w: [] for w in IHM_STATS_WINDOWS}
+    all_values = []
+
+    for position in positions:
+        position_id = position[0]
+        position_name = position[1]
+        measurements = queries.get_measurements_within_range(machine_id, position_id, start_time, end_time)
+        calibrations = queries.get_calibrations(machine_id, position_id)
+
+        series = []
+        values = []
+        calibration_index = 0
+        calibration_value = 0
+        latest_time = None
+        latest_value = None
+
+        for measurement in measurements:
+            m_time = measurement[1]
+            while calibration_index < len(calibrations) and calibrations[calibration_index][0] <= m_time:
+                calibration_value = calibrations[calibration_index][1]
+                calibration_index += 1
+
+            thickness = _thickness(measurement[4], measurement[5], calibration_value)
+            ts_key = m_time.replace(microsecond=0)
+            series.append((ts_key, thickness))
+            values.append(thickness)
+            all_values.append(thickness)
+            labels_set.add(ts_key)
+
+            if latest_time is None or m_time > latest_time:
+                latest_time = m_time
+                latest_value = thickness
+
+            age = now - m_time
+            for w in IHM_STATS_WINDOWS:
+                if age <= timedelta(minutes=w):
+                    window_values[w].append(thickness)
+
+        # Leitura atual: sempre o registro mais recente, mesmo fora da janela.
+        current_value = latest_value
+        current_time = latest_time.replace(microsecond=0) if latest_time else None
+        if current_value is None:
+            last = queries.get_last_measurement(machine_id, position_id)
+            if last:
+                calibration_value = _calibration_value_at(calibrations, last[1])
+                current_value = _thickness(last[4], last[5], calibration_value)
+                current_time = last[1].replace(microsecond=0)
+
+        stale = current_time is None or (now - current_time) > timedelta(seconds=120)
+        out_of_limits = False
+        if current_value is not None:
+            out_of_limits = (
+                current_value < machine_limits['lower'] or current_value > machine_limits['upper']
+            )
+
+        cal_info = last_calibrations.get((machine_id, position_id))
+        last_calibration = None
+        if cal_info and cal_info.get('date') is not None:
+            last_calibration = (cal_info['date'] + LOCAL_TIME_OFFSET).strftime('%d/%m %H:%M')
+
+        per_position.append({
+            'id': position_id,
+            'name': position_name,
+            'current': current_value,
+            'current_time': (current_time + LOCAL_TIME_OFFSET).strftime('%H:%M:%S') if current_time else None,
+            'stale': stale,
+            'out_of_limits': out_of_limits,
+            'min': min(values) if values else None,
+            'max': max(values) if values else None,
+            'avg': _avg(values),
+            'count': len(values),
+            'last_calibration': last_calibration,
+        })
+        position_series.append(series)
+
+    # Série combinada do gráfico: rótulos compartilhados (união dos timestamps).
+    labels_dt = sorted(labels_set)
+    label_index = {ts: i for i, ts in enumerate(labels_dt)}
+    combined_series = []
+    for idx, position in enumerate(positions):
+        aligned = [None] * len(labels_dt)
+        for ts_key, thickness in position_series[idx]:
+            aligned[label_index[ts_key]] = thickness
+        combined_series.append({'name': position[1], 'values': aligned})
+
+    labels = [(ts + LOCAL_TIME_OFFSET).strftime('%H:%M:%S') for ts in labels_dt]
+
+    last_60 = window_values[60]
+    sup_count = len([v for v in last_60 if v > machine_limits['upper']])
+    inf_count = len([v for v in last_60 if v < machine_limits['lower']])
+    perc = ((sup_count + inf_count) / len(last_60) * 100) if last_60 else 0
+
+    footer = {
+        'avg15': _avg(window_values[15]),
+        'avg30': _avg(window_values[30]),
+        'avg60': _avg(window_values[60]),
+        'avg_window': _avg(all_values),
+        'std': _std(all_values),
+        'min': min(all_values) if all_values else None,
+        'max': max(all_values) if all_values else None,
+        'perc': perc,
+        'freq': len(last_60) / 60 if last_60 else 0,
+    }
+
+    return {
+        'machine_id': machine_id,
+        'machine_name': machine[1],
+        'hours': hours,
+        'limits': machine_limits,
+        'graph_limits': graph_limits,
+        'positions': per_position,
+        'chart': {'labels': labels, 'series': combined_series},
+        'footer': footer,
+        'updated_at': (now + LOCAL_TIME_OFFSET).strftime('%H:%M:%S'),
+        'out_of_limits': any(p['out_of_limits'] for p in per_position),
+        'stale': all(p['stale'] for p in per_position) if per_position else True,
+    }
+
+
+@app.route('/ihm')
+def ihm_index():
+    machines = queries.get_machines()
+    return render_template('ihm_index.html', machines=machines)
+
+
+@app.route('/ihm/<int:machine_id>')
+def ihm_machine(machine_id):
+    hours = request.args.get('hours', 1, type=int)
+    payload = build_ihm_payload(machine_id, hours)
+    if payload is None:
+        return redirect(url_for('ihm_index'))
+    return render_template('ihm.html', payload=payload)
+
+
+@app.route('/ihm/<int:machine_id>/data')
+def ihm_machine_data(machine_id):
+    hours = request.args.get('hours', 1, type=int)
+    payload = build_ihm_payload(machine_id, hours)
+    if payload is None:
+        return jsonify({'error': 'machine not found'}), 404
+    return jsonify(payload)
+
 
 @app.route('/')
 def homepage():

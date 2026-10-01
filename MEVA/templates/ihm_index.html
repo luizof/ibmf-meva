@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="{{ url_for('static', filename='ihm.css') }}">
+    <title>IHM - Seleção de Máquina</title>
+</head>
+<body>
+    <div class="ihm-index">
+        <a class="back-button" href="{{ url_for('homepage') }}">&#8592; Voltar</a>
+        <h1>IHM - Painel por Máquina</h1>
+        <div class="sub">
+            Cada máquina possui uma URL exclusiva, ideal para o Raspberry Pi em modo kiosk.
+            Use o link correspondente abaixo.
+        </div>
+        <div class="machine-link-grid">
+            {% for machine in machines %}
+            <a class="machine-link" href="{{ url_for('ihm_machine', machine_id=machine[0]) }}">
+                <div class="m-name">{{ machine[1] }}</div>
+                <div class="m-url">/ihm/{{ machine[0] }}</div>
+            </a>
+            {% else %}
+            <div class="sub">Nenhuma máquina cadastrada.</div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
