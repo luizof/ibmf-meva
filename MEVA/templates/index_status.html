@@ -9,6 +9,10 @@
 <body>
     <a href="{{ url_for('homepage') }}" class="back-button">Voltar</a>
     <h1>Monitoramento de Sensores</h1>
+    <p class="status-live">
+        Atualização automática &middot; último update:
+        <span id="last-update">--:--:--</span>
+    </p>
     {% for machine in machines %}
         <h2>Máquina: {{ machine[1] }}</h2>
         <p>{{ machine[2] }}</p>
@@ -18,13 +22,20 @@
             {% for sensor in sensors %}
                 {% if sensor[2] == machine[0] and sensor[3] == position[0] %}
                     <div class="sensor">
-                        <p>Sensor {{ "Superior" if sensor[4] else "Inferior" }}: 
-                            <span class="{{ sensor[5] }}">{{ "Conectado" if sensor[5] == 'connected' else "Desconectado" }}</span>
+                        <p>Sensor {{ "Superior" if sensor[4] else "Inferior" }}:
+                            <span id="sensor-{{ sensor[0] }}" class="{{ sensor[5] }}">{{ "Conectado" if sensor[5] == 'connected' else "Desconectado" }}</span>
                         </p>
                     </div>
                 {% endif %}
             {% endfor %}
         {% endfor %}
     {% endfor %}
+    <script>
+        window.__STATUS_META__ = {
+            dataUrl: "{{ url_for('status_data') }}",
+            pollMs: 5000
+        };
+    </script>
+    <script src="{{ url_for('static', filename='status.js') }}"></script>
 </body>
 </html>

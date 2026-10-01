@@ -90,6 +90,17 @@ input[type="submit"]:hover {
     color: yellow;
 }
 
+.status-live {
+    color: #666;
+    font-size: 14px;
+    margin: -5px 0 15px;
+}
+
+.status-live span {
+    font-weight: bold;
+    color: #333;
+}
+
 .machine-grid {
     display: flex;
     flex-wrap: wrap;

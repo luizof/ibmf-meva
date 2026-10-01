@@ -22,6 +22,14 @@ app = Flask(__name__)
 # Horário local (UTC-3) usado para exibir os gráficos
 LOCAL_TIME_OFFSET = timedelta(hours=-3)
 
+# Tempo (em segundos) que um sensor pode ficar sem resposta antes de ser
+# considerado desconectado. Evita alternância rápida em falhas instantâneas.
+SENSOR_DISCONNECT_TIMEOUT = 10
+
+# Último momento (UTC) em que cada sensor respondeu com sucesso.
+# Chave: ID do sensor; valor: datetime. Usado para a histerese de conexão.
+_sensor_last_ok = {}
+
 def measure_sensor_pair(sensor_pair):
     machine_id = sensor_pair[2]
     position_id = sensor_pair[3]
@@ -318,19 +326,75 @@ def remover_sensor(id):
     conn.close()
     return redirect(url_for('sensores'))
 
+def check_sensors():
+    """Lê todos os sensores e atualiza o estado de conexão de cada um.
+
+    Um sensor só é considerado desconectado após ``SENSOR_DISCONNECT_TIMEOUT``
+    segundos sem nenhuma resposta (histerese). Enquanto a última resposta for
+    recente, ele permanece "connected" mesmo que a leitura atual falhe.
+
+    As leituras são feitas em paralelo para manter a página de status ágil.
+    O estado é persistido no banco apenas quando muda, reduzindo escritas.
+    """
+    global _sensor_last_ok
+    now = datetime.utcnow()
+    sensors = queries.get_sensors()
+
+    # Leituras em paralelo para não atrasar a resposta
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        distances = list(executor.map(lambda s: fast_get_distance(s[1], 8899), sensors))
+
+    results = []
+    for sensor, distance in zip(sensors, distances):
+        sensor_id = sensor[0]
+        if distance is not None:
+            _sensor_last_ok[sensor_id] = now
+
+        last_ok = _sensor_last_ok.get(sensor_id)
+        connected = (
+            last_ok is not None
+            and (now - last_ok) < timedelta(seconds=SENSOR_DISCONNECT_TIMEOUT)
+        )
+        status = "connected" if connected else "disconnected"
+
+        # Persiste somente quando o estado muda
+        if status != sensor[5]:
+            queries.update_sensor_status(sensor_id, status)
+
+        results.append({
+            'id': sensor_id,
+            'ip': sensor[1],
+            'machine_id': sensor[2],
+            'position_id': sensor[3],
+            'e_superior': bool(sensor[4]),
+            'status': status,
+        })
+    return results
+
+
 @app.route('/status')
 def status():
-    sensors = queries.get_sensors()
-    for sensor in sensors:
-        sensor_ip = sensor[1]
-        distance = fast_get_distance(sensor_ip,8899)
-        status = "connected" if distance is not None else "disconnected"
-        queries.update_sensor_status(sensor[0], status)
-    
+    check_sensors()
+
     machines = queries.get_machines()
     positions = queries.get_positions()
     sensors = queries.get_sensors()  # Refresh sensor data after updating status
     return render_template('index_status.html', machines=machines, positions=positions, sensors=sensors)
+
+
+@app.route('/status/data')
+def status_data():
+    """Endpoint de atualização contínua da página de status (polling).
+
+    Lê os sensores, aplica a histerese de conexão e devolve o estado atual
+    para o cliente atualizar a página sem precisar recarregá-la.
+    """
+    results = check_sensors()
+    return jsonify({
+        'sensors': results,
+        'updated_at': (datetime.utcnow() + LOCAL_TIME_OFFSET).strftime('%H:%M:%S'),
+        'disconnect_timeout': SENSOR_DISCONNECT_TIMEOUT,
+    })
 
 
 @app.route('/calibrations')
