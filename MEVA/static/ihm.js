@@ -161,25 +161,25 @@ function createIhmChart(payload) {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    labels: { color: '#8fa0bd', boxWidth: 18, font: { size: 12 } }
+                    labels: { color: '#5c6b84', boxWidth: 18, font: { size: 12 } }
                 }
             },
             scales: {
                 y: {
                     min: payload.graph_limits.lower,
                     max: payload.graph_limits.upper,
-                    ticks: { color: '#8fa0bd' },
-                    grid: { color: 'rgba(143,160,189,0.15)' }
+                    ticks: { color: '#5c6b84' },
+                    grid: { color: 'rgba(91,107,133,0.18)' }
                 },
                 x: {
                     ticks: {
-                        color: '#8fa0bd',
+                        color: '#5c6b84',
                         autoSkip: true,
                         maxTicksLimit: 12,
                         maxRotation: 0,
                         minRotation: 0
                     },
-                    grid: { color: 'rgba(143,160,189,0.08)' }
+                    grid: { color: 'rgba(91,107,133,0.10)' }
                 }
             }
         }

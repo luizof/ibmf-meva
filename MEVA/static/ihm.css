@@ -1,19 +1,20 @@
 /* ============================================================
    IHM - Painel industrial 16:9 (apenas exibição / kiosk)
    Layout otimizado para telas widescreen, sem interação touch.
+   Tema CLARO.
    ============================================================ */
 
 :root {
-    --bg: #0b1220;
-    --panel: #131c2e;
-    --panel-2: #1a2438;
-    --border: #26324a;
-    --text: #e8eefc;
-    --muted: #8fa0bd;
-    --accent: #059bff;
-    --ok: #2fd07a;
-    --warn: #ff9020;
-    --bad: #ff4069;
+    --bg: #eef1f6;
+    --panel: #ffffff;
+    --panel-2: #f6f8fb;
+    --border: #d5dbe6;
+    --text: #1b2436;
+    --muted: #5c6b84;
+    --accent: #0b6bcb;
+    --ok: #1a9e57;
+    --warn: #d97a00;
+    --bad: #e03055;
 }
 
 * {
@@ -51,6 +52,7 @@ body {
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 10px 16px;
+    box-shadow: 0 1px 3px rgba(27, 36, 54, 0.06);
 }
 
 .ihm-header .title {
@@ -89,17 +91,17 @@ body {
     font-weight: bold;
     letter-spacing: 1px;
     background: var(--ok);
-    color: #06210f;
+    color: #ffffff;
 }
 
 .status-pill.warn {
     background: var(--warn);
-    color: #2a1600;
+    color: #ffffff;
 }
 
 .status-pill.bad {
     background: var(--bad);
-    color: #2a000c;
+    color: #ffffff;
 }
 
 .clock {
@@ -128,7 +130,7 @@ body {
 }
 
 .back-button:hover {
-    background-color: #0074cc;
+    background-color: #0957a3;
     text-decoration: none;
 }
 
@@ -149,11 +151,12 @@ body {
     flex-direction: column;
     gap: 6px;
     min-width: 0;
+    box-shadow: 0 1px 3px rgba(27, 36, 54, 0.06);
 }
 
 .kpi-card.out {
     border-left-color: var(--bad);
-    background: linear-gradient(180deg, #2a1220, var(--panel));
+    background: linear-gradient(180deg, #fdeef1, var(--panel));
 }
 
 .kpi-card.stale {
@@ -227,6 +230,7 @@ body {
     display: flex;
     flex-direction: column;
     min-height: 0;
+    box-shadow: 0 1px 3px rgba(27, 36, 54, 0.06);
 }
 
 .panel-title {
@@ -273,6 +277,7 @@ body {
     padding: 8px 12px;
     text-align: center;
     min-width: 0;
+    box-shadow: 0 1px 3px rgba(27, 36, 54, 0.06);
 }
 
 .stat-label {
@@ -328,6 +333,7 @@ body {
     padding: 18px;
     text-decoration: none;
     color: var(--text);
+    box-shadow: 0 1px 3px rgba(27, 36, 54, 0.06);
 }
 
 .machine-link:hover {
