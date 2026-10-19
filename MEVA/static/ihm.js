@@ -6,6 +6,82 @@
 
 var IHM_COLORS = ['#059bff', '#ff4069', '#ff9020', '#22cfcf', '#a06bff', '#2fd07a'];
 
+/* ============================================================
+   Alarme sonoro quando a espessura está fora dos limites.
+   Usa a Web Audio API (sem arquivos externos) e respeita o
+   cooldown configurável em Configurações e Debug
+   (payload.alarm.cooldown_seconds, padrão 180 s).
+   ============================================================ */
+
+var alarmCtx = null;
+var lastAlarmAt = 0;
+
+function getAlarmCtx() {
+    if (!alarmCtx) {
+        var Ctx = window.AudioContext || window.webkitAudioContext;
+        if (!Ctx) return null;
+        try {
+            alarmCtx = new Ctx();
+        } catch (e) {
+            alarmCtx = null;
+        }
+    }
+    return alarmCtx;
+}
+
+function unlockAlarmAudio() {
+    // Navegadores bloqueiam áudio até o primeiro gesto do usuário. Depois de
+    // liberado, o próximo polling dispara o alarme se houver não conformidade.
+    var ctx = getAlarmCtx();
+    if (ctx && ctx.state === 'suspended') {
+        ctx.resume().catch(function () {});
+    }
+}
+
+function emitAlarmBeeps(ctx) {
+    var t0 = ctx.currentTime;
+    for (var i = 0; i < 3; i++) {
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        var start = t0 + i * 0.35;
+        var duration = 0.22;
+        osc.type = 'square';
+        osc.frequency.value = 880;
+        gain.gain.setValueAtTime(0, start);
+        gain.gain.linearRampToValueAtTime(0.2, start + 0.01);
+        gain.gain.setValueAtTime(0.2, start + duration - 0.01);
+        gain.gain.linearRampToValueAtTime(0, start + duration);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(start);
+        osc.stop(start + duration);
+    }
+}
+
+function playAlarmSound() {
+    var ctx = getAlarmCtx();
+    if (!ctx || ctx.state === 'closed') return false;
+    if (ctx.state !== 'running') {
+        if (ctx.state === 'suspended') {
+            ctx.resume().catch(function () {});
+        }
+        return false;
+    }
+    emitAlarmBeeps(ctx);
+    return true;
+}
+
+function maybeSoundAlarm(payload) {
+    if (!payload.out_of_limits) return;
+    var cooldownSeconds = (payload.alarm && payload.alarm.cooldown_seconds) || 180;
+    var cooldownMs = cooldownSeconds * 1000;
+    var now = Date.now();
+    if (lastAlarmAt && (now - lastAlarmAt) < cooldownMs) return;
+    if (playAlarmSound()) {
+        lastAlarmAt = now;
+    }
+}
+
 function fmt(value, decimals) {
     if (value === null || value === undefined || isNaN(value)) {
         return '—';
@@ -110,7 +186,7 @@ function buildDatasets(payload) {
             borderColor: color,
             backgroundColor: color,
             data: s.values,
-            spanGaps: true,
+            spanGaps: false,
             fill: false,
             cubicInterpolationMode: 'monotone',
             tension: 0.1,
@@ -211,6 +287,7 @@ function refresh() {
                 window.__IHM__ = data;
                 render(data);
                 updateIhmChart(data);
+                maybeSoundAlarm(data);
             }
         })
         .catch(function () {
@@ -235,8 +312,12 @@ function tickClock() {
 window.addEventListener('load', function () {
     var payload = window.__IHM__;
     if (!payload) return;
+    ['pointerdown', 'keydown', 'touchstart'].forEach(function (evt) {
+        window.addEventListener(evt, unlockAlarmAudio);
+    });
     render(payload);
     createIhmChart(payload);
+    maybeSoundAlarm(payload);
     tickClock();
     setInterval(tickClock, 1000);
     setInterval(refresh, 10000);

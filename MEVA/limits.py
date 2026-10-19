@@ -13,8 +13,12 @@ GRAPH_DEFAULT_UPPER = 5.0
 SMOOTHING_DEFAULT_ENABLED = False
 SMOOTHING_DEFAULT_SECONDS = 30
 
+# Default cooldown (in seconds) between audible alarms on the IHM panel.
+# While a thickness stays out of limits the alarm repeats every cooldown.
+ALARM_DEFAULT_COOLDOWN_SECONDS = 180  # 3 minutes
+
 # Reserved top-level keys in limits.json that are NOT machine ids
-_RESERVED_KEYS = {'graph', 'smoothing'}
+_RESERVED_KEYS = {'graph', 'smoothing', 'alarm'}
 
 
 def load_limits():
@@ -83,6 +87,28 @@ def save_smoothing(enabled, seconds):
         'enabled': bool(enabled),
         'seconds': max(1, int(seconds)),
     }
+    save_limits(data)
+
+
+def load_alarm():
+    """Return the audible alarm settings used by the IHM panel."""
+    data = load_limits()
+    alarm = data.get('alarm', {})
+    try:
+        cooldown = int(alarm.get('cooldown_seconds', ALARM_DEFAULT_COOLDOWN_SECONDS))
+    except (TypeError, ValueError):
+        cooldown = ALARM_DEFAULT_COOLDOWN_SECONDS
+    return {'cooldown_seconds': max(1, cooldown)}
+
+
+def save_alarm(cooldown_seconds):
+    """Persist the audible alarm cooldown (seconds) without touching other settings."""
+    try:
+        cooldown = int(cooldown_seconds)
+    except (TypeError, ValueError):
+        cooldown = ALARM_DEFAULT_COOLDOWN_SECONDS
+    data = load_limits()
+    data['alarm'] = {'cooldown_seconds': max(1, cooldown)}
     save_limits(data)
 
 

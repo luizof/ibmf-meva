@@ -18,6 +18,16 @@
     </select>
     <p>Leitura Atual: <span id="reading">--</span></p>
 
+    <h2>Alarme sonoro (IHM)</h2>
+    <p>Quando a espessura medida estiver fora dos limites, o painel IHM emite um alarme sonoro.
+       O cooldown é o intervalo mínimo entre dois alarmes enquanto a não conformidade persistir.</p>
+    <form method="post" action="{{ url_for('set_alarm') }}">
+        <label for="cooldown_seconds">Cooldown do alarme (segundos):</label>
+        <input type="number" min="1" step="1" name="cooldown_seconds" id="cooldown_seconds" value="{{ alarm.cooldown_seconds }}">
+        <input type="submit" value="Salvar">
+    </form>
+    <p style="font-size: 0.85em; color: #555;">Padrão: 180 s (3 minutos).</p>
+
     <h2>Status do Banco de Dados</h2>
     {% if connection_status %}
         <p class="connected">Conectado com sucesso.</p>
