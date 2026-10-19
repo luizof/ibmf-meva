@@ -42,9 +42,11 @@ Para evitar problemas de codificacao, o `docker-compose.yml` define a variavel `
 
 Medidas com espessura negativa ou maior que 10 mm são consideradas **nulas**:
 isso indica que o produto provavelmente não está passando na máquina e a
-produção está interrompida. Valores nulos aparecem como lacunas no gráfico e
-ficam fora das estatísticas (mínimo, média, máximo, % de inconformidade etc.)
-no painel IHM e nas demais telas.
+produção está interrompida. O teste é feito sobre o valor final da medida —
+após a última calibração, as subtrações e os filtros (média móvel) — e nunca
+sobre distâncias brutas dos sensores. Valores nulos aparecem como lacunas no
+gráfico e ficam fora das estatísticas (mínimo, média, máximo, % de
+inconformidade etc.) no painel IHM e nas demais telas.
 
 ## Alarme sonoro (IHM)
 

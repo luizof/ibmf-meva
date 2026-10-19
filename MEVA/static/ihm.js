@@ -179,13 +179,16 @@ function renderHeader(payload) {
 
 function buildDatasets(payload) {
     var datasets = [];
+    // Cada posição plota os próprios pontos ({x: rótulo, y: espessura}). Com
+    // spanGaps: false, y: null (espessura medida nula, produto fora da máquina)
+    // abre uma lacuna real; leituras de instantes diferentes se conectam.
     payload.chart.series.forEach(function (s, i) {
         var color = IHM_COLORS[i % IHM_COLORS.length];
         datasets.push({
             label: s.name,
             borderColor: color,
             backgroundColor: color,
-            data: s.values,
+            data: s.points || [],
             spanGaps: false,
             fill: false,
             cubicInterpolationMode: 'monotone',
@@ -195,11 +198,11 @@ function buildDatasets(payload) {
         });
     });
 
-    var len = payload.chart.labels.length;
+    var labels = payload.chart.labels || [];
     var dash = { borderDash: [6, 4], borderWidth: 2, fill: false, pointRadius: 0 };
     datasets.push({
         label: 'Limite Superior',
-        data: Array(len).fill(payload.limits.upper),
+        data: labels.map(function (l) { return {x: l, y: payload.limits.upper}; }),
         borderColor: '#ff4069',
         borderDash: dash.borderDash,
         borderWidth: dash.borderWidth,
@@ -208,7 +211,7 @@ function buildDatasets(payload) {
     });
     datasets.push({
         label: 'Limite Inferior',
-        data: Array(len).fill(payload.limits.lower),
+        data: labels.map(function (l) { return {x: l, y: payload.limits.lower}; }),
         borderColor: '#ff4069',
         borderDash: dash.borderDash,
         borderWidth: dash.borderWidth,

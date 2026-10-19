@@ -727,6 +727,8 @@ def view_h():
                     calibration_value = calibrations[calibration_index][1]
                     calibration_index += 1
 
+                # Pipeline da medida: última calibração -> subtrações ->
+                # tratamento de dados nulos. O resultado é a espessura medida.
                 thickness = _valid_thickness(calibration_value - measurement[4] - measurement[5])
                 all_thickness_data[measurement_time][position_index] = thickness
                 labels_set_dt.add(measurement_time)
@@ -737,9 +739,14 @@ def view_h():
             for position_index, position in enumerate(positions)
         ]
 
-        # Smooth first (on raw values), then clamp for display
+        # Pipeline da série exibida: filtros (média móvel) -> tratamento de
+        # dados nulos sobre o valor final -> escala do gráfico (exibição).
         graph_data = [
             (name, _smooth_series(labels_dt, vals, smoothing))
+            for name, vals in graph_data
+        ]
+        graph_data = [
+            (name, [_valid_thickness(v) for v in vals])
             for name, vals in graph_data
         ]
         graph_data = [
@@ -813,6 +820,8 @@ def view():
                     calibration_value = calibrations[calibration_index][1]
                     calibration_index += 1
 
+                # Pipeline da medida: última calibração -> subtrações ->
+                # tratamento de dados nulos. O resultado é a espessura medida.
                 thickness = _valid_thickness(calibration_value - measurement[4] - measurement[5])
                 all_thickness_data[measurement_time][position_index] = thickness
                 labels_set_dt.add(measurement_time)
@@ -840,9 +849,14 @@ def view():
             if out_of_limits:
                 break 
 
-        # Smooth first, then clamp for display
+        # Pipeline da série exibida: filtros (média móvel) -> tratamento de
+        # dados nulos sobre o valor final -> escala do gráfico (exibição).
         graph_data = [
             (name, _smooth_series(labels_dt, vals, smoothing))
+            for name, vals in graph_data
+        ]
+        graph_data = [
+            (name, [_valid_thickness(v) for v in vals])
             for name, vals in graph_data
         ]
         graph_data = [
@@ -906,6 +920,8 @@ def mobile_view():
                     calibration_value = calibrations[calibration_index][1]
                     calibration_index += 1
 
+                # Pipeline da medida: última calibração -> subtrações ->
+                # tratamento de dados nulos. O resultado é a espessura medida.
                 thickness = _valid_thickness(calibration_value - measurement[4] - measurement[5])
 
                 # Espessura nula (produto fora da máquina) não entra na série
@@ -943,13 +959,16 @@ def mobile_view():
 
         times_15 = sorted([t for t in thickness_per_timestamp if now - t <= timedelta(minutes=15)])
         labels = [(t + LOCAL_TIME_OFFSET).strftime('%H:%M') for t in times_15]
-        # Raw averaged series, then smoothing (if enabled), then clamp for display
+        # Pipeline da série exibida: média entre posições por instante -> filtros
+        # (média móvel) -> tratamento de dados nulos sobre o valor final ->
+        # escala do gráfico (exibição).
         raw_values = [
             sum(thickness_per_timestamp[t]) / len(thickness_per_timestamp[t])
             for t in times_15
         ]
         smoothed_values = _smooth_series(times_15, raw_values, smoothing)
-        values = [limits.clamp(v, mg_lower, mg_upper) for v in smoothed_values]
+        values = [_valid_thickness(v) for v in smoothed_values]
+        values = [limits.clamp(v, mg_lower, mg_upper) for v in values]
 
         logging.info(
             "Mobile view data for machine %s: labels=%s, values=%s",
@@ -1192,6 +1211,10 @@ def build_ihm_payload(machine_id, hours):
                 calibration_value = calibrations[calibration_index][1]
                 calibration_index += 1
 
+            # Pipeline da medida: última calibração -> subtrações -> tratamento
+            # de dados nulos. O resultado é a espessura medida. No IHM não há
+            # filtro de série; quando existir, o valor final também passa pelo
+            # teste de nulos após o filtro.
             thickness = _valid_thickness(_thickness(measurement[4], measurement[5], calibration_value))
             ts_key = m_time.replace(microsecond=0)
             series.append((ts_key, thickness))
@@ -1248,17 +1271,29 @@ def build_ihm_payload(machine_id, hours):
         })
         position_series.append(series)
 
-    # Série combinada do gráfico: rótulos compartilhados (união dos timestamps).
+    # Série do gráfico: cada posição plota apenas os próprios pontos, na ordem
+    # do tempo (rótulo, espessura). Alinhar as posições na união dos timestamps
+    # criava lacunas falsas nas séries das posições que não mediram naquele
+    # instante e quebrava a linha. Aqui o valor nulo (``y: null``) existe somente
+    # para espessura medida nula — produto fora da máquina — e abre uma lacuna
+    # real na linha.
     labels_dt = sorted(labels_set)
-    label_index = {ts: i for i, ts in enumerate(labels_dt)}
+    label_str = {ts: (ts + LOCAL_TIME_OFFSET).strftime('%H:%M:%S') for ts in labels_dt}
     combined_series = []
     for idx, position in enumerate(positions):
-        aligned = [None] * len(labels_dt)
+        points_by_ts = {}
         for ts_key, thickness in position_series[idx]:
-            aligned[label_index[ts_key]] = thickness
-        combined_series.append({'name': position[1], 'values': aligned})
+            # Medições no mesmo segundo: vale a última.
+            points_by_ts[ts_key] = thickness
+        combined_series.append({
+            'name': position[1],
+            'points': [
+                {'x': label_str[ts], 'y': points_by_ts[ts]}
+                for ts in sorted(points_by_ts)
+            ],
+        })
 
-    labels = [(ts + LOCAL_TIME_OFFSET).strftime('%H:%M:%S') for ts in labels_dt]
+    labels = [label_str[ts] for ts in labels_dt]
 
     last_60 = window_values[60]
     sup_count = len([v for v in last_60 if v > machine_limits['upper']])
