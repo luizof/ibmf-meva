@@ -35,6 +35,28 @@ _sensor_last_ok = {}
 # em superior/inferior antes de calcular a média).
 READINGS_PER_CYCLE = 11
 
+# Faixa de espessura válida (mm). Medidas fora dela são consideradas nulas:
+# provavelmente o produto não está passando na máquina e a produção está
+# interrompida.
+VALID_THICKNESS_MIN = 0.0
+VALID_THICKNESS_MAX = 10.0
+
+
+def _valid_thickness(value):
+    """Devolve a espessura medida em mm ou ``None`` quando ela é inválida.
+
+    Espessuras negativas ou maiores que ``VALID_THICKNESS_MAX`` indicam que o
+    produto provavelmente não está passando na máquina (produção interrompida)
+    e devem ser tratadas como nulas em vez de virarem picos nos gráficos e
+    alarmes.
+    """
+    if value is None:
+        return None
+    value = float(value)
+    if value < VALID_THICKNESS_MIN or value > VALID_THICKNESS_MAX:
+        return None
+    return value
+
 # Estado compartilhado entre threads de medição e o Flask.
 # - ``measurement_progress``: (machine_id, position_id) -> {'count': int, 'total': int}
 #   atualizado em tempo real pela ``measure_sensor_pair``.
@@ -705,7 +727,7 @@ def view_h():
                     calibration_value = calibrations[calibration_index][1]
                     calibration_index += 1
 
-                thickness = calibration_value - measurement[4] - measurement[5]
+                thickness = _valid_thickness(calibration_value - measurement[4] - measurement[5])
                 all_thickness_data[measurement_time][position_index] = thickness
                 labels_set_dt.add(measurement_time)
 
@@ -791,7 +813,7 @@ def view():
                     calibration_value = calibrations[calibration_index][1]
                     calibration_index += 1
 
-                thickness = calibration_value - measurement[4] - measurement[5]
+                thickness = _valid_thickness(calibration_value - measurement[4] - measurement[5])
                 all_thickness_data[measurement_time][position_index] = thickness
                 labels_set_dt.add(measurement_time)
         
@@ -884,17 +906,22 @@ def mobile_view():
                     calibration_value = calibrations[calibration_index][1]
                     calibration_index += 1
 
-                thickness = calibration_value - measurement[4] - measurement[5]
-                thickness_per_timestamp[m_time].append(thickness)
-                all_values.append(thickness)
+                thickness = _valid_thickness(calibration_value - measurement[4] - measurement[5])
 
-                if now - m_time <= timedelta(minutes=15):
-                    last_15.append(thickness)
-                if now - m_time <= timedelta(minutes=30):
-                    last_30.append(thickness)
-                if now - m_time <= timedelta(minutes=60):
-                    last_60.append(thickness)
+                # Espessura nula (produto fora da máquina) não entra na série
+                # do gráfico nem nas estatísticas.
+                if thickness is not None:
+                    thickness_per_timestamp[m_time].append(thickness)
+                    all_values.append(thickness)
 
+                    if now - m_time <= timedelta(minutes=15):
+                        last_15.append(thickness)
+                    if now - m_time <= timedelta(minutes=30):
+                        last_30.append(thickness)
+                    if now - m_time <= timedelta(minutes=60):
+                        last_60.append(thickness)
+
+                # Leitura atual: vale sempre a última leitura, mesmo que nula.
                 if latest_time is None or m_time > latest_time:
                     latest_time = m_time
                     latest_val = thickness
@@ -909,7 +936,7 @@ def mobile_view():
                             calibration_value = cal[1]
                         else:
                             break
-                    thickness = calibration_value - last[4] - last[5]
+                    thickness = _valid_thickness(calibration_value - last[4] - last[5])
                     if latest_time is None or m_time > latest_time:
                         latest_time = m_time
                         latest_val = thickness
@@ -1039,7 +1066,7 @@ def debug_page():
         connection_status = False
         table_counts = {}
         sensors = []
-    return render_template('debug.html', sensors=sensors, connection_status=connection_status, table_counts=table_counts)
+    return render_template('debug.html', sensors=sensors, connection_status=connection_status, table_counts=table_counts, alarm=limits.load_alarm())
 
 
 @app.route('/sensor_reading/<int:sensor_id>')
@@ -1133,6 +1160,7 @@ def build_ihm_payload(machine_id, hours):
     positions = queries.get_positions()
     limit_data = limits.load_limits()
     graph_limits = limits.get_machine_graph_limits(machine_id, data=limit_data)
+    alarm = limits.load_alarm()
     machine_limits = limit_data.get(
         str(machine_id),
         {'lower': limits.DEFAULT_LOWER, 'upper': limits.DEFAULT_UPPER},
@@ -1164,11 +1192,12 @@ def build_ihm_payload(machine_id, hours):
                 calibration_value = calibrations[calibration_index][1]
                 calibration_index += 1
 
-            thickness = _thickness(measurement[4], measurement[5], calibration_value)
+            thickness = _valid_thickness(_thickness(measurement[4], measurement[5], calibration_value))
             ts_key = m_time.replace(microsecond=0)
             series.append((ts_key, thickness))
-            values.append(thickness)
-            all_values.append(thickness)
+            if thickness is not None:
+                values.append(thickness)
+                all_values.append(thickness)
             labels_set.add(ts_key)
 
             if latest_time is None or m_time > latest_time:
@@ -1176,18 +1205,20 @@ def build_ihm_payload(machine_id, hours):
                 latest_value = thickness
 
             age = now - m_time
-            for w in IHM_STATS_WINDOWS:
-                if age <= timedelta(minutes=w):
-                    window_values[w].append(thickness)
+            if thickness is not None:
+                for w in IHM_STATS_WINDOWS:
+                    if age <= timedelta(minutes=w):
+                        window_values[w].append(thickness)
 
         # Leitura atual: sempre o registro mais recente, mesmo fora da janela.
+        # Espessuras inválidas permanecem nulas (produto fora da máquina).
         current_value = latest_value
         current_time = latest_time.replace(microsecond=0) if latest_time else None
-        if current_value is None:
+        if latest_time is None:
             last = queries.get_last_measurement(machine_id, position_id)
             if last:
                 calibration_value = _calibration_value_at(calibrations, last[1])
-                current_value = _thickness(last[4], last[5], calibration_value)
+                current_value = _valid_thickness(_thickness(last[4], last[5], calibration_value))
                 current_time = last[1].replace(microsecond=0)
 
         stale = current_time is None or (now - current_time) > timedelta(seconds=120)
@@ -1252,6 +1283,7 @@ def build_ihm_payload(machine_id, hours):
         'hours': hours,
         'limits': machine_limits,
         'graph_limits': graph_limits,
+        'alarm': alarm,
         'positions': per_position,
         'chart': {'labels': labels, 'series': combined_series},
         'footer': footer,
@@ -1283,6 +1315,20 @@ def ihm_machine_data(machine_id):
     if payload is None:
         return jsonify({'error': 'machine not found'}), 404
     return jsonify(payload)
+
+
+@app.route('/set_alarm', methods=['POST'])
+def set_alarm():
+    try:
+        cooldown = int(request.form.get('cooldown_seconds', limits.ALARM_DEFAULT_COOLDOWN_SECONDS))
+    except (TypeError, ValueError):
+        cooldown = limits.ALARM_DEFAULT_COOLDOWN_SECONDS
+    limits.save_alarm(cooldown)
+    # Redirect back to where the user came from (the settings/debug page)
+    referer = request.headers.get('Referer')
+    if referer:
+        return redirect(referer)
+    return redirect(url_for('debug_page'))
 
 
 @app.route('/set_smoothing', methods=['POST'])
